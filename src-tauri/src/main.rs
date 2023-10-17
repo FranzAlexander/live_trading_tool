@@ -6,7 +6,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use api::{get_market_data, KRAKEN_OHLC_ENDPOINT};
+use api::{get_extended_balance, get_market_data, KRAKEN_OHLC_ENDPOINT};
 use futures::{SinkExt, StreamExt};
 use hmac::{Hmac, Mac, NewMac};
 use model::{MarketDataResponse, OHLCResponse, OHLC};
@@ -18,8 +18,6 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 use market::get_ohlc_history;
 
-type HmacSha512 = Hmac<Sha512>;
-
 mod api;
 mod market;
 mod model;
@@ -28,8 +26,6 @@ mod model;
 // const SECRET_KEY: String = std::env::var("KRAKEN_SECRET_KEY").unwrap();
 
 // const TOKEN_ENDPOINT: &str = "https://api.kraken.com/0/private/GetWebSocketsToken";
-
-const KRAKEN_URL: &str = "wss://ws.kraken.com";
 
 // fn get_kraken_signature(request_path: String, post_data: &str) -> String {
 //     let secret_key = std::env::var("KRAKEN_SECRET_KEY").unwrap();
@@ -174,7 +170,7 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             dotenv::dotenv().ok();
-
+            get_extended_balance();
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
             // the default value is `main`. note that it must be unique
             // let main_window = app.get_window("main").unwrap();
@@ -188,37 +184,37 @@ fn main() {
         .expect("error while running tauri application");
 }
 
-async fn start_websocket(window: tauri::Window) {
-    let (ws_stream, _) = connect_async(KRAKEN_URL)
-        .await
-        .expect("Error connecting to websocket!");
+// async fn start_websocket(window: tauri::Window) {
+//     let (ws_stream, _) = connect_async(KRAKEN_URL)
+//         .await
+//         .expect("Error connecting to websocket!");
 
-    let subscription_msg = serde_json::json!({
-    "event": "subscribe",
-    "pair": ["BTC/USD"],
-    "subscription": {
-        "interval": 5,
-        "name": "ohlc"
-    }});
+//     let subscription_msg = serde_json::json!({
+//     "event": "subscribe",
+//     "pair": ["BTC/USD"],
+//     "subscription": {
+//         "interval": 5,
+//         "name": "ohlc"
+//     }});
 
-    let (mut write, mut read) = ws_stream.split();
+//     let (mut write, mut read) = ws_stream.split();
 
-    write
-        .send(Message::Text(subscription_msg.to_string()))
-        .await
-        .expect("failed to send sub message");
+//     write
+//         .send(Message::Text(subscription_msg.to_string()))
+//         .await
+//         .expect("failed to send sub message");
 
-    while let Some(msg) = read.next().await {
-        let message = msg.expect("Failed to read  message");
+//     while let Some(msg) = read.next().await {
+//         let message = msg.expect("Failed to read  message");
 
-        let _ = match message {
-            Message::Text(text) => window.emit(
-                "message-stream",
-                Payload {
-                    message: format!("{}", text).into(),
-                },
-            ),
-            _ => Ok(()),
-        };
-    }
-}
+//         let _ = match message {
+//             Message::Text(text) => window.emit(
+//                 "message-stream",
+//                 Payload {
+//                     message: format!("{}", text).into(),
+//                 },
+//             ),
+//             _ => Ok(()),
+//         };
+//     }
+// }
