@@ -1,16 +1,28 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{collections::HashMap, time::SystemTime};
+use std::{
+    collections::HashMap,
+    time::{Duration, SystemTime},
+};
 
+use api::{get_market_data, KRAKEN_OHLC_ENDPOINT};
 use futures::{SinkExt, StreamExt};
 use hmac::{Hmac, Mac, NewMac};
+use model::{MarketDataResponse, OHLCResponse, OHLC};
 use sha2::{Digest, Sha256, Sha512};
 use tauri::{window, Manager, Window};
+use tokio::time::sleep;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 // use tokio_tungstenite::{connect_async, tungstenite::Message};
 
+use market::get_ohlc_history;
+
 type HmacSha512 = Hmac<Sha512>;
+
+mod api;
+mod market;
+mod model;
 
 // const API_KEY: String = std::env::var("KRAKEN_API_KEY").unwrap();
 // const SECRET_KEY: String = std::env::var("KRAKEN_SECRET_KEY").unwrap();
@@ -97,6 +109,11 @@ struct Payload {
     message: String,
 }
 
+#[derive(Clone, serde::Serialize)]
+struct OhlcPayload {
+    message: Vec<OHLC>,
+}
+
 #[tauri::command]
 async fn init_process(window: Window) {
     // tauri::async_runtime::spawn(async move {
@@ -157,26 +174,16 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             dotenv::dotenv().ok();
+
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
             // the default value is `main`. note that it must be unique
-            let main_window = app.get_window("main").unwrap();
+            // let main_window = app.get_window("main").unwrap();
 
-            tauri::async_runtime::spawn(start_websocket(main_window));
-
-            // std::thread::spawn(move || loop {
-            //     main_window
-            //         .emit(
-            //             "message-stream",
-            //             Payload {
-            //                 message: "Tauri is awesome!".into(),
-            //             },
-            //         )
-            //         .unwrap();
-            // });
+            // tauri::async_runtime::spawn(test_market_data(main_window));
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![init_process])
+        .invoke_handler(tauri::generate_handler![init_process, get_ohlc_history])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
