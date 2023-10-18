@@ -22,6 +22,37 @@ export type ChartDataItem = {
 	close: number;
 };
 
+export type TradeBalance = {
+	equivalent?: number | null;
+	trade?: number | null;
+	margin?: number | null;
+	unrealized_pl?: number | null;
+	cost?: number | null;
+	valuation?: number | null;
+	equity?: number | null;
+	free_magin?: number | null;
+	margin_level?: number | null;
+	unexecuted_value?: number | null;
+};
+
+export type ExtendedBalance = {
+	balance: number;
+	hold_trade: number;
+};
+
+export type ExtendedBalances = {
+	[key: string]: ExtendedBalance;
+};
+
+// export function isExtendedBalances(data: any): data is ExtendedBalances {
+// 	const potentialBalance = (data as ExtendedBalances)[Object.keys(data)[0]];
+// 	return data && typeof data === 'object' && 'balance' in potentialBalance;
+// }
+
+// export function isTradeBalance(data: any): data is TradeBalance {
+// 	return data && typeof data === 'object' && 'equivalent' in data;
+// }
+
 // export function mapToChartFormat(
 // 	data: Array<OhlcEventPayload['message'][number]>
 // ): ChartDataItem[] {

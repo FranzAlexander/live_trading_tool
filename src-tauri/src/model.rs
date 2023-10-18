@@ -1,9 +1,21 @@
 use std::collections::HashMap;
 
+pub struct AppState {
+    pub client: reqwest::blocking::Client,
+    pub api_key: String,
+    pub secret_key: String,
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct MarketDataResponse<T> {
+pub struct ApiResponse<T> {
     pub error: Vec<String>,
     pub result: T,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct ApiResponseMap<T> {
+    pub error: Vec<String>,
+    pub result: HashMap<String, T>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -31,21 +43,54 @@ pub struct OHLC {
     pub count: i32,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct AccountBalance {
-    pub balances: HashMap<String, Balance>,
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
+pub struct ExtendedBalance {
+    #[serde(with = "string_or_float")]
+    pub balance: f64,
+    #[serde(with = "string_or_float")]
+    pub hold_trade: f64,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
-pub struct Balance {
-    #[serde(with = "string_or_float")]
-    pub balance: f64,
+pub struct TradeBalance {
     #[serde(with = "string_or_float_opt")]
-    pub credit: Option<f64>,
+    #[serde(rename = "eb")]
+    pub equivalent: Option<f64>,
+
     #[serde(with = "string_or_float_opt")]
-    pub credit_used: Option<f64>,
-    #[serde(with = "string_or_float")]
-    pub hold_trade: f64,
+    #[serde(rename = "tb")]
+    pub trade: Option<f64>,
+
+    #[serde(with = "string_or_float_opt")]
+    #[serde(rename = "m")]
+    pub margin: Option<f64>,
+
+    #[serde(with = "string_or_float_opt")]
+    #[serde(rename = "n")]
+    pub unrealized_pl: Option<f64>,
+
+    #[serde(with = "string_or_float_opt")]
+    #[serde(rename = "c")]
+    pub cost: Option<f64>,
+
+    #[serde(with = "string_or_float_opt")]
+    #[serde(rename = "v")]
+    pub valuation: Option<f64>,
+
+    #[serde(with = "string_or_float_opt")]
+    #[serde(rename = "e")]
+    pub equity: Option<f64>,
+
+    #[serde(with = "string_or_float_opt")]
+    #[serde(rename = "mf")]
+    pub free_magin: Option<f64>,
+
+    #[serde(default, with = "string_or_float_opt", rename = "ml")]
+    pub margin_level: Option<f64>,
+
+    #[serde(with = "string_or_float_opt")]
+    #[serde(rename = "uv")]
+    pub unexecuted_value: Option<f64>,
 }
 
 pub(crate) mod string_or_float {
@@ -107,13 +152,22 @@ pub(crate) mod string_or_float_opt {
     {
         #[derive(Deserialize)]
         #[serde(untagged)]
-        enum StringOrFloat {
+        enum StringOrFloatOpt {
             String(String),
             Float(f64),
+            None,
         }
 
-        Ok(Some(crate::model::string_or_float::deserialize(
-            deserializer,
-        )?))
+        match StringOrFloatOpt::deserialize(deserializer) {
+            Ok(StringOrFloatOpt::String(s)) => {
+                if s == "INF" {
+                    Ok(Some(f64::INFINITY))
+                } else {
+                    s.parse().map(Some).map_err(serde::de::Error::custom)
+                }
+            }
+            Ok(StringOrFloatOpt::Float(i)) => Ok(Some(i)),
+            Ok(StringOrFloatOpt::None) | Err(_) => Ok(None), // Handle both the explicit None variant and errors as None
+        }
     }
 }

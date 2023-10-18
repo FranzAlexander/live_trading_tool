@@ -7,9 +7,11 @@ use std::{
 };
 
 use api::{get_extended_balance, get_market_data, KRAKEN_OHLC_ENDPOINT};
+use ema::Ema;
 use futures::{SinkExt, StreamExt};
 use hmac::{Hmac, Mac, NewMac};
-use model::{MarketDataResponse, OHLCResponse, OHLC};
+use model::{AppState, OHLCResponse, OHLC};
+use reqwest::blocking::Client;
 use sha2::{Digest, Sha256, Sha512};
 use tauri::{window, Manager, Window};
 use tokio::time::sleep;
@@ -18,7 +20,14 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 use market::get_ohlc_history;
 
+use crate::{
+    api::get_trade_balance,
+    ema::{create_ema, ema_history},
+};
+
 mod api;
+mod ema;
+mod indicator;
 mod market;
 mod model;
 
@@ -168,9 +177,13 @@ async fn init_process(window: Window) {
 fn main() {
     dotenv::dotenv().ok();
     tauri::Builder::default()
+        .manage(AppState {
+            client: Client::new(),
+            api_key: std::env::var("API_KEY").unwrap(),
+            secret_key: std::env::var("SECRET_KEY").unwrap(),
+        })
         .setup(|app| {
             dotenv::dotenv().ok();
-            get_extended_balance();
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
             // the default value is `main`. note that it must be unique
             // let main_window = app.get_window("main").unwrap();
@@ -179,7 +192,14 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![init_process, get_ohlc_history])
+        .invoke_handler(tauri::generate_handler![
+            init_process,
+            get_ohlc_history,
+            get_extended_balance,
+            get_trade_balance,
+            create_ema,
+            ema_history
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
