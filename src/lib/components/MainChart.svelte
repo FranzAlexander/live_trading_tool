@@ -1,5 +1,7 @@
 <script lang="ts">
-	import type { IChartApi } from 'lightweight-charts';
+	import type { IChartApi, OhlcData } from 'lightweight-charts';
+
+	export let ohlc: OhlcData[];
 
 	let chart: IChartApi;
 </script>

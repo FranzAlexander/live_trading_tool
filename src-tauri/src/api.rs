@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::SystemTime};
+use std::{collections::HashMap, fmt::format, time::SystemTime};
 
 use hmac::{Hmac, Mac, NewMac};
 use reqwest::{
@@ -14,6 +14,7 @@ type HmacSha512 = Hmac<Sha512>;
 pub const KRAKEN_URL: &str = "wss://ws.kraken.com";
 
 pub const KRAKEN_OHLC_ENDPOINT: &str = "https://api.kraken.com/0/public/OHLC?pair=";
+pub const KRAKEN_TRADEABLE_PAIR_ENDPOINT: &str = "https://api.kraken.com/0/public/AssetPairs?pair=";
 
 const KRAKEN_API_URL: &str = "https://api.kraken.com";
 
@@ -43,6 +44,15 @@ pub fn get_market_data<T: for<'de> serde::Deserialize<'de>>(url: String) -> T {
         .unwrap()
         .json::<T>()
         .unwrap()
+}
+
+#[tauri::command]
+pub fn get_tradeable_assets(symbols: Vec<String>, state: tauri::State<AppState>) {
+    let pairs = symbols.join(",");
+    let url = format!("{}{}", KRAKEN_TRADEABLE_PAIR_ENDPOINT, pairs);
+
+    let res = state.client.get(&url).send().unwrap().text().unwrap();
+    println!("{:?}", res);
 }
 
 #[tauri::command]

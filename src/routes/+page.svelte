@@ -18,8 +18,14 @@
 	} from 'lightweight-charts';
 	import { onMount } from 'svelte';
 	import ExtendedBalance from '$lib/components/ExtendedBalance.svelte';
-	import { createEma, setEmaHistory, type Ema } from '$lib/ema';
+	import { setEmaHistory } from '$lib/ema';
+	import CoinButton from '$lib/components/CoinButton.svelte';
+	import { setMacdHistory, type MacdHistory } from '$lib/indicators';
+	import MacdChart from '$lib/components/MacdChart.svelte';
+	import OrderPanel from '$lib/components/OrderPanel.svelte';
 	// 5C2EDD nEXT COLOUR
+
+	let coins: ('BTC' | 'ETH' | 'XRP')[] = ['BTC', 'ETH', 'XRP'];
 
 	let chart: IChartApi;
 	let candlestickSeries: ISeriesApi<'Candlestick'>;
@@ -27,12 +33,13 @@
 	let vwapSeries: ISeriesApi<'Line'>;
 	let emaSeries: ISeriesApi<'Line'>;
 
-	let extended_balances: ExtendedBalances;
+	let extendedBalances: ExtendedBalances = {};
 	let trade_balances: TradeBalance;
 
 	let container: HTMLElement;
+	let macdHistory: MacdHistory[];
 
-	let ema: Ema;
+	let currenyAmount = 0.0;
 
 	listen('tauri://resize', (event) => {
 		chart.resize(container.clientWidth, container.clientHeight);
@@ -46,11 +53,9 @@
 
 	invoke('init_process');
 
-	let loaded = false;
+	$: loaded = false;
 
 	onMount(async () => {
-		ema = await createEma(20);
-
 		chart = createChart(container, {
 			layout: {
 				background: {
@@ -115,10 +120,9 @@
 			}
 		});
 
-		invoke('get_ohlc_history').then(async (result) => {
+		await invoke('get_ohlc_history').then(async (result) => {
 			let ohlcData = result as OhlcEventPayload[];
 			ohlcData.sort((a, b) => a.time - b.time);
-			console.log(ohlcData);
 
 			const chartData = ohlcData.map((item) => {
 				return {
@@ -148,7 +152,7 @@
 			candlestickSeries.setData(chartData);
 			volumeSeries.setData(volumeData);
 
-			const emaHistory = await setEmaHistory(ema, ohlcData);
+			const emaHistory = await setEmaHistory(ohlcData);
 
 			const emaData = emaHistory.map((item) => {
 				return {
@@ -157,20 +161,29 @@
 				};
 			});
 
-			console.log(emaData);
+			macdHistory = await setMacdHistory(ohlcData);
+
+			// console.log(emaData);
 
 			emaSeries.setData(emaData);
 
 			// vwapSeries.setData(vwapData);
 		});
 
-		extended_balances = await invoke('get_extended_balance');
+		const extendedResult: ExtendedBalances = await invoke('get_extended_balance');
+		console.log(extendedResult);
 
-		// console.log(extended_balances);
+		for (const [key, value] of Object.entries(extendedResult)) {
+			const newKey = key.startsWith('Z') || key.startsWith('X') ? key.substring(1) : key;
+			extendedBalances[newKey] = value;
+		}
+
+		const symbols = ['XRPUSD'];
+		await invoke('get_tradeable_assets', { symbols: symbols });
+
+		currenyAmount = extendedBalances['USD'].balance;
 
 		trade_balances = await invoke('get_trade_balance');
-
-		// console.log(trade_balances);
 
 		candlestickSeries.applyOptions({
 			wickUpColor: '#00CC00',
@@ -187,17 +200,25 @@
 </script>
 
 <main>
-	<!-- {#if loaded} -->
-	<!-- <div id="ext-balance"> -->
-	<!-- <ExtendedBalance data={extended_balances} /> -->
-	<!-- <Balance name={'Ext Balance'} data={extended_balances} />
-		<Balance name={'Trade Balance'} data={trade_balances} /> -->
-	<!-- </div> -->
-	<!-- {/if} -->
-	<div>s</div>
+	<div class="w-full flex gap-10">
+		{#each coins as coin}
+			<CoinButton coinName={coin} />
+		{/each}
+	</div>
 
-	<div bind:this={container} />
-	<div>s</div>
+	<div class="flex flex-row w-full" id="main-chart-container">
+		<div class="w-4/5" bind:this={container} />
+		<div class="w-1/6">
+			<OrderPanel bind:currenyAmount />
+		</div>
+	</div>
+	<div class="flex justify-between">
+		{#if loaded}
+			<MacdChart initialOhlc={macdHistory} />
+		{/if}
+
+		<ExtendedBalance data={extendedBalances} />
+	</div>
 </main>
 
 <style>
@@ -206,9 +227,7 @@
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
-		/* gap: 1rem;
-		grid-template-columns: 15% minmax(0, 2fr) minmax(0, 1fr) 15%;
-		grid-template-rows: 10% 40% repeat(2, minmax(0, 1fr)); */
+		box-sizing: border-box;
 		padding: 1rem;
 		overflow: hidden; /* Add this to prevent overflow if contents are too big for their containers */
 	}

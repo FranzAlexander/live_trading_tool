@@ -1,9 +1,16 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Mutex};
+
+use crate::{macd::Macd, Ema};
 
 pub struct AppState {
     pub client: reqwest::blocking::Client,
     pub api_key: String,
     pub secret_key: String,
+}
+
+pub struct IndicatorState {
+    pub ema: Mutex<Ema>,
+    pub macd: Mutex<Macd>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -91,6 +98,45 @@ pub struct TradeBalance {
     #[serde(with = "string_or_float_opt")]
     #[serde(rename = "uv")]
     pub unexecuted_value: Option<f64>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct AssetInfo {
+    pub aclass: String,
+    pub altname: String,
+    #[serde(with = "string_or_float")]
+    pub decimals: f64,
+    #[serde(with = "string_or_float")]
+    pub display_decimals: f64,
+    pub collateral_value: f64,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct PairInfo {
+    altname: String,
+    wsname: String,
+    aclass_base: String,
+    base: String,
+    aclass_quote: String,
+    quote: String,
+    lot: String,
+    pair_decimals: i32,
+    cost_decimals: i32,
+    lot_decimals: i32,
+    lot_multiplier: i32,
+    leverage_buy: Vec<i32>,
+    leverage_sell: Vec<i32>,
+    fees: Vec<(String, String)>,
+    fees_maker: Vec<(String, String)>,
+    fee_volume_currency: String,
+    margin_call: i32,
+    margin_stop: i32,
+    ordermin: String,
+    costmin: String,
+    tick_size: String,
+    status: String,
+    long_position_limit: i32,
+    short_position_limit: i32,
 }
 
 pub(crate) mod string_or_float {

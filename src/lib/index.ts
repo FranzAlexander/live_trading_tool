@@ -1,3 +1,5 @@
+import BTC from './icons/BTC.svelte';
+
 // place files you want to import through the `$lib` alias in this folder.
 export interface WindowResize {
 	width: number;
@@ -43,6 +45,14 @@ export type ExtendedBalance = {
 export type ExtendedBalances = {
 	[key: string]: ExtendedBalance;
 };
+
+export type CoinName = 'BTC';
+
+export const coinIcons: Record<CoinName, unknown> = {
+	BTC
+};
+
+export type OrderType = 'buy' | 'sell';
 
 // export function isExtendedBalances(data: any): data is ExtendedBalances {
 // 	const potentialBalance = (data as ExtendedBalances)[Object.keys(data)[0]];

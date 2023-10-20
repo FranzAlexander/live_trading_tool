@@ -1,68 +1,33 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{
-    collections::HashMap,
-    time::{Duration, SystemTime},
-};
+use std::sync::Mutex;
 
-use api::{get_extended_balance, get_market_data, KRAKEN_OHLC_ENDPOINT};
+use api::get_extended_balance;
 use ema::Ema;
 use futures::{SinkExt, StreamExt};
-use hmac::{Hmac, Mac, NewMac};
-use model::{AppState, OHLCResponse, OHLC};
+
+use macd::Macd;
+use model::{AppState, IndicatorState, OHLCResponse, OHLC};
 use reqwest::blocking::Client;
-use sha2::{Digest, Sha256, Sha512};
 use tauri::{window, Manager, Window};
-use tokio::time::sleep;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 // use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 use market::get_ohlc_history;
 
 use crate::{
-    api::get_trade_balance,
-    ema::{create_ema, ema_history},
+    api::{get_trade_balance, get_tradeable_assets},
+    ema::ema_history,
+    macd::macd_history,
 };
 
 mod api;
 mod ema;
 mod indicator;
+mod macd;
 mod market;
 mod model;
-
-// const API_KEY: String = std::env::var("KRAKEN_API_KEY").unwrap();
-// const SECRET_KEY: String = std::env::var("KRAKEN_SECRET_KEY").unwrap();
-
-// const TOKEN_ENDPOINT: &str = "https://api.kraken.com/0/private/GetWebSocketsToken";
-
-// fn get_kraken_signature(request_path: String, post_data: &str) -> String {
-//     let secret_key = std::env::var("KRAKEN_SECRET_KEY").unwrap();
-//     let nonce = get_nonce();
-
-//     let p_data = if post_data.is_empty() {
-//         format!("nonce={}", nonce)
-//     } else {
-//         format!("nonce={}&{}", nonce, post_data)
-//     };
-
-//     let hash_digest = Sha256::digest(p_data.as_bytes());
-//     let private_key = base64::decode(secret_key.as_bytes()).unwrap();
-
-//     let mut mac = HmacSha512::new_from_slice(&private_key).unwrap();
-//     let mut hmac_data = request_path.into_bytes();
-//     hmac_data.append(&mut hash_digest.to_vec());
-//     mac.update(&hmac_data);
-//     base64::encode(mac.finalize().into_bytes())
-// }
-
-// /// Get a nonce as suggsted by Kraken
-// fn get_nonce() -> u64 {
-//     SystemTime::now()
-//         .duration_since(SystemTime::UNIX_EPOCH)
-//         .unwrap()
-//         .as_millis() as u64
-// }
 
 // #[tauri::command]
 // async fn connect_to_websocket(window: Window) {
@@ -177,6 +142,10 @@ async fn init_process(window: Window) {
 fn main() {
     dotenv::dotenv().ok();
     tauri::Builder::default()
+        .manage(IndicatorState {
+            ema: Mutex::new(Ema::new(20)),
+            macd: Mutex::new(Macd::new(12, 26, 9)),
+        })
         .manage(AppState {
             client: Client::new(),
             api_key: std::env::var("API_KEY").unwrap(),
@@ -197,8 +166,9 @@ fn main() {
             get_ohlc_history,
             get_extended_balance,
             get_trade_balance,
-            create_ema,
-            ema_history
+            ema_history,
+            macd_history,
+            get_tradeable_assets
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
