@@ -39,10 +39,9 @@ fn main() {
         .manage(AppState {
             client: Client::new(),
             api_key: std::env::var("COINBASE_API_KEY").unwrap(),
-            secret_key: std::env::var("COINBASE_SECRET_KEY").unwrap(),
+            secret_key: std::env::var("COINBASE_API_SECRET").unwrap(),
         })
         .setup(|app| {
-            dotenv::dotenv().ok();
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
             // the default value is `main`. note that it must be unique
             // let main_window = app.get_window("main").unwrap();
