@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Mutex};
 use crate::{macd::Macd, Ema};
 
 pub struct AppState {
-    pub client: reqwest::blocking::Client,
+    pub client: reqwest::Client,
     pub api_key: String,
     pub secret_key: String,
 }
@@ -104,11 +104,11 @@ pub struct TradeBalance {
 pub struct AssetInfo {
     pub aclass: String,
     pub altname: String,
-    #[serde(with = "string_or_float")]
-    pub decimals: f64,
-    #[serde(with = "string_or_float")]
-    pub display_decimals: f64,
-    pub collateral_value: f64,
+    pub decimals: i32,
+    pub display_decimals: i32,
+    #[serde(default)]
+    pub collateral_value: Option<f64>,
+    pub status: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]

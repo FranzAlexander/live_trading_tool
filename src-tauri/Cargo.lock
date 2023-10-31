@@ -76,6 +76,7 @@ dependencies = [
  "sha2 0.9.9",
  "tauri",
  "tauri-build",
+ "tauri-plugin-store",
  "tokio",
  "tokio-native-tls",
  "tokio-tungstenite",
@@ -3130,6 +3131,18 @@ dependencies = [
  "syn 1.0.109",
  "tauri-codegen",
  "tauri-utils",
+]
+
+[[package]]
+name = "tauri-plugin-store"
+version = "0.0.0"
+source = "git+https://github.com/tauri-apps/plugins-workspace?branch=v1#9e24e52164eeb12d9069d95ef8ada133ed7f37d5"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "thiserror",
 ]
 
 [[package]]
