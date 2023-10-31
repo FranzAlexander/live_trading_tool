@@ -7,10 +7,10 @@
 	$: watched_symbols = [''];
 
 	onMount(async () => {
-		watched_symbols = await invoke('get_symbols');
+		 await invoke('app_start');
 
-		console.log(watched_symbols);
+		// console.log(watched_symbols);
 	});
 </script>
 
-<WatchedAssets symbols={watched_symbols} />
+<!-- <WatchedAssets symbols={watched_symbols} /> -->

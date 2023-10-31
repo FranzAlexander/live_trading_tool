@@ -29,7 +29,7 @@ dotenv = "*"
 futures = "*"
 tokio-native-tls = "*"
 tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
-
+chrono = { version = "*", features = ["serde"] }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.

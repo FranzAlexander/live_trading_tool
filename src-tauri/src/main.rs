@@ -5,6 +5,7 @@ use std::sync::Mutex;
 
 // use ema::Ema;
 
+use api::coinbase::get_market_trades;
 use model::AppState;
 // use macd::Macd;
 // use model::{AppState, IndicatorState, OHLC};
@@ -19,7 +20,7 @@ use reqwest::Client;
 // mod market;
 // // mod model;
 // mod user;
-
+mod api;
 mod model;
 
 #[derive(Clone, serde::Serialize)]
@@ -37,12 +38,11 @@ fn main() {
     tauri::Builder::default()
         .manage(AppState {
             client: Client::new(),
-            api_key: std::env::var("API_KEY").unwrap(),
-            secret_key: std::env::var("SECRET_KEY").unwrap(),
+            api_key: std::env::var("COINBASE_API_KEY").unwrap(),
+            secret_key: std::env::var("COINBASE_SECRET_KEY").unwrap(),
         })
         .setup(|app| {
             dotenv::dotenv().ok();
-
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
             // the default value is `main`. note that it must be unique
             // let main_window = app.get_window("main").unwrap();
@@ -51,8 +51,14 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![app_start])
         .plugin(tauri_plugin_store::Builder::default().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+async fn app_start(app:tauri::State<'_, AppState>)->Result<String, String>{
+    get_market_trades(&app.client, app.secret_key.as_bytes(), &app.api_key).await;
+    Ok("s".to_string())
 }
