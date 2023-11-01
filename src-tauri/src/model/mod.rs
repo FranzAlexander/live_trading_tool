@@ -1,10 +1,18 @@
-pub mod kraken;
 pub mod coinbase;
+pub mod kraken;
 
-pub struct AppState{
-pub client: reqwest::Client,
-pub api_key:String,
-pub secret_key:String,
+pub struct AppState {
+    pub client: reqwest::Client,
+    pub api_key: String,
+    pub secret_key: String,
+}
+
+pub struct RangeBar{
+    pub close: f64,
+    pub high: f64,
+    pub low: f64,
+    pub open: f64,
+    pub range: usize,
 }
 
 pub(crate) mod string_or_float {
