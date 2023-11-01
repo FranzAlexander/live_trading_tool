@@ -1,18 +1,17 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::sync::Mutex;
-
 // use ema::Ema;
 
-use api::coinbase::get_market_trades;
-use model::AppState;
+use api::kraken::get_market_trades;
+use model::{DeltaCandle, RangeBar};
+
 // use macd::Macd;
 // use model::{AppState, IndicatorState, OHLC};
+use crate::model::{AppState, RangeData};
 use reqwest::Client;
-
 // use crate::{market::get_asset_info, user::get_symbols};
-
+use tokio::sync::Mutex;
 // mod api;
 // mod ema;
 // mod indicator;
@@ -22,6 +21,8 @@ use reqwest::Client;
 // mod user;
 mod api;
 mod model;
+mod range;
+mod rolling_window;
 
 #[derive(Clone, serde::Serialize)]
 struct Payload {
@@ -35,11 +36,13 @@ struct Payload {
 
 fn main() {
     dotenv::dotenv().ok();
+
     tauri::Builder::default()
         .manage(AppState {
             client: Client::new(),
-            api_key: std::env::var("COINBASE_API_KEY").unwrap(),
-            secret_key: std::env::var("COINBASE_API_SECRET").unwrap(),
+            api_key: std::env::var("API_KEY").unwrap(),
+            secret_key: std::env::var("SECRET_KEY").unwrap(),
+            range_data: Mutex::new(RangeData::new(2.0)),
         })
         .setup(|app| {
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
@@ -57,7 +60,25 @@ fn main() {
 }
 
 #[tauri::command]
-async fn app_start(app:tauri::State<'_, AppState>)->Result<String, String>{
-    get_market_trades(&app.client, app.secret_key.as_bytes(), &app.api_key).await;
-    Ok("s".to_string())
+async fn app_start(
+    app: tauri::State<'_, AppState>,
+) -> Result<(Vec<RangeBar>, Vec<DeltaCandle>), String> {
+    let trades = get_market_trades(&app.client).await;
+    for trade in trades.iter() {
+        app.range_data
+            .lock()
+            .await
+            .update(trade.price, trade.volume, &trade.buy_sell);
+
+        println!("{:?}", trade);
+    }
+
+    println!("{:?}", app.range_data.lock().await.range_bars);
+
+    let range_data = app.range_data.lock().await;
+
+    Ok((
+        range_data.range_bars.ordered_elements(),
+        range_data.delta_bars.ordered_elements(),
+    ))
 }
