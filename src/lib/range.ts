@@ -1,8 +1,10 @@
 export type RangeBar = {
-	close: number;
+	open: number;
 	high: number;
 	low: number;
-	open: number;
+	close: number;
+	start_time: number;
+	is_first_bar: boolean;
 };
 
 export type DeltaBar = {

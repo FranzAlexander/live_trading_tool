@@ -14,7 +14,11 @@ use reqwest::Client;
 // use crate::{market::get_asset_info, user::get_symbols};
 use tokio::sync::Mutex;
 
-use range::{Bar,RangeData, range_bar::RangeBar, delta_bar::{DeltaBar, self}};
+use range::{
+    delta_bar::{self, DeltaBar},
+    range_bar::RangeBar,
+    Bar, RangeData,
+};
 // mod api;
 // mod ema;
 // mod indicator;
@@ -45,7 +49,7 @@ fn main() {
             client: Client::new(),
             api_key: std::env::var("API_KEY").unwrap(),
             secret_key: std::env::var("SECRET_KEY").unwrap(),
-            range_data: Mutex::new(RangeData::new(2.0)),
+            range_data: Mutex::new(RangeData::new(0.02)),
         })
         .setup(|app| {
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
@@ -65,21 +69,20 @@ fn main() {
 #[tauri::command]
 async fn app_start(
     app: tauri::State<'_, AppState>,
-) -> Result<(VecDeque<RangeBar>, VecDeque<DeltaBar>), String> {
+) -> Result<(Vec<RangeBar>, VecDeque<DeltaBar>), String> {
     let trades = get_market_trades(&app.client).await;
     for trade in trades.iter() {
         app.range_data
             .lock()
             .await
-            .update(trade.price, trade.volume, &trade.buy_sell);
-
+            .update(trade.price, trade.volume, &trade.buy_sell, trade.time);
     }
-
 
     let (range_bars, delta_bars) = app.range_data.lock().await.get_bars();
 
-    Ok((
-        range_bars,
-        delta_bars,
-    ))
+    let mut sorted_range_bars: Vec<RangeBar> = range_bars.into_iter().collect();
+
+    sorted_range_bars.sort_by_key(|item| item.start_time);
+
+    Ok((sorted_range_bars, delta_bars))
 }

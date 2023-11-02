@@ -21,7 +21,7 @@ impl Bar for DeltaBar {
             cumulative_delta: 0.0,
         }
     }
-    fn update(&mut self, delta: f64, range: f64) -> bool {
+    fn update(&mut self, delta: f64, range: f64, time: f64) -> bool {
         if self.open == 0.0 {
             // Initialize the bar if it's the first update.
             self.open = delta;
@@ -33,7 +33,7 @@ impl Bar for DeltaBar {
             // Update the cumulative delta and close value.
             self.cumulative_delta += delta;
             self.close = self.cumulative_delta;
-    
+
             // Update the high and low values.
             if self.cumulative_delta > self.high {
                 self.high = self.cumulative_delta;
@@ -41,7 +41,7 @@ impl Bar for DeltaBar {
             if self.cumulative_delta < self.low {
                 self.low = self.cumulative_delta;
             }
-    
+
             // Check if the bar needs to be closed.
             if (self.high - self.low).abs() >= range {
                 if self.close == self.high || self.close == self.low {
@@ -52,7 +52,6 @@ impl Bar for DeltaBar {
         }
         false
     }
-    
 
     fn reset(&mut self) {
         self.open = 0.0;

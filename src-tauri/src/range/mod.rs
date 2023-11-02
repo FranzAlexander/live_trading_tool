@@ -7,7 +7,7 @@ pub mod range_bar;
 
 pub trait Bar {
     fn new() -> Self;
-    fn update(&mut self, value: f64, range: f64) -> bool;
+    fn update(&mut self, value: f64, range: f64, time: f64) -> bool;
     fn reset(&mut self);
 }
 
@@ -28,35 +28,74 @@ impl RangeData {
         }
     }
 
-    pub fn update(&mut self, price: f64, size: f64, side: &str) {
+    pub fn update(&mut self, price: f64, size: f64, side: &str, time: f64) {
         let delta = match side {
             "b" => size,
             "s" => -size,
             _ => 0.0,
         };
-    
+
         // Update or create a new RangeBar if necessary
-        if self.range_bars.is_empty() || !self.range_bars.back_mut().unwrap().update(price, self.range) {
-            if self.range_bars.len() == self.range_bars.capacity() {
-                self.range_bars.pop_front();
+        match self.range_bars.back_mut() {
+            Some(last_bar) => {
+                if !last_bar.update(price, self.range, time) {
+                    // Check if the price has moved sufficiently away from the last bar's close
+                    if (price - last_bar.close).abs() >= self.range {
+                        // Efficient capacity management
+                        if self.range_bars.len() >= self.range_bars.capacity() {
+                            self.range_bars.pop_front();
+                        }
+                        self.range_bars.push_back(self.create_new_bar(price, time));
+                    }
+                }
             }
-            let mut new_bar = RangeBar::new();
-            new_bar.update(price, self.range); // Initialize the new bar with the current price
-            self.range_bars.push_back(new_bar);
+            None => {
+                // If there are no bars, create the first one
+                self.range_bars.push_back(self.create_new_bar(price, time));
+            }
         }
-    
+
+        // // Update or create a new RangeBar if necessary
+        // if self.range_bars.is_empty()
+        //     || !self
+        //         .range_bars
+        //         .back_mut()
+        //         .unwrap()
+        //         .update(price, self.range)
+        // {
+        //     if self.range_bars.len() == self.range_bars.capacity() {
+        //         self.range_bars.pop_front();
+        //     }
+        //     let mut new_bar = RangeBar::new();
+        //     new_bar.update(price, self.range); // Initialize the new bar with the current price
+        //     self.range_bars.push_back(new_bar);
+        // }
+
         // Update or create a new DeltaBar if necessary
-        if self.delta_bars.is_empty() || !self.delta_bars.back_mut().unwrap().update(delta, self.range) {
+        if self.delta_bars.is_empty()
+            || !self
+                .delta_bars
+                .back_mut()
+                .unwrap()
+                .update(delta, self.range, time)
+        {
             if self.delta_bars.len() == self.delta_bars.capacity() {
                 self.delta_bars.pop_front();
             }
             let mut new_bar = DeltaBar::new();
-            new_bar.update(delta, self.range); // Initialize the new bar with the current delta
+            new_bar.update(delta, self.range, time); // Initialize the new bar with the current delta
             self.delta_bars.push_back(new_bar);
         }
     }
-    
+
     pub fn get_bars(&self) -> (VecDeque<RangeBar>, VecDeque<DeltaBar>) {
         (self.range_bars.clone(), self.delta_bars.clone())
+    }
+
+    // Function to create and initialize a new bar
+    fn create_new_bar(&self, price: f64, time: f64) -> RangeBar {
+        let mut new_bar = RangeBar::new();
+        new_bar.update(price, self.range, time); // Initialize the new bar with the current price
+        new_bar
     }
 }
