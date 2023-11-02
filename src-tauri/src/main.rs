@@ -45,7 +45,7 @@ fn main() {
             client: Client::new(),
             api_key: std::env::var("API_KEY").unwrap(),
             secret_key: std::env::var("SECRET_KEY").unwrap(),
-            range_data: Mutex::new(RangeData::new(0.02)),
+            range_data: Mutex::new(RangeData::new(2.0)),
         })
         .setup(|app| {
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`

@@ -34,34 +34,28 @@ impl RangeData {
             "s" => -size,
             _ => 0.0,
         };
-
-        if self.range_bars.is_empty()
-            || self
-                .range_bars
-                .back_mut()
-                .unwrap()
-                .update(price, self.range)
-        {
+    
+        // Update or create a new RangeBar if necessary
+        if self.range_bars.is_empty() || !self.range_bars.back_mut().unwrap().update(price, self.range) {
             if self.range_bars.len() == self.range_bars.capacity() {
                 self.range_bars.pop_front();
             }
-            self.range_bars.push_back(RangeBar::new());
+            let mut new_bar = RangeBar::new();
+            new_bar.update(price, self.range); // Initialize the new bar with the current price
+            self.range_bars.push_back(new_bar);
         }
-
-        if self.delta_bars.is_empty()
-            || self
-                .delta_bars
-                .back_mut()
-                .unwrap()
-                .update(delta, self.range)
-        {
+    
+        // Update or create a new DeltaBar if necessary
+        if self.delta_bars.is_empty() || !self.delta_bars.back_mut().unwrap().update(delta, self.range) {
             if self.delta_bars.len() == self.delta_bars.capacity() {
                 self.delta_bars.pop_front();
             }
-            self.delta_bars.push_back(DeltaBar::new());
+            let mut new_bar = DeltaBar::new();
+            new_bar.update(delta, self.range); // Initialize the new bar with the current delta
+            self.delta_bars.push_back(new_bar);
         }
     }
-
+    
     pub fn get_bars(&self) -> (VecDeque<RangeBar>, VecDeque<DeltaBar>) {
         (self.range_bars.clone(), self.delta_bars.clone())
     }
