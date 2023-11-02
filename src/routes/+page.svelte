@@ -5,12 +5,11 @@
 	import WatchedAssets from '$lib/components/WatchedAssets.svelte';
 	import type { DeltaBar, RangeBar } from '$lib/range';
 
-	$: watched_symbols = [''];
+    $: loaded = false;
 
 	onMount(async () => {
 		const rangeData: [RangeBar[], DeltaBar[]] = await invoke('app_start');
 		console.log(rangeData);
-		// console.log(watched_symbols);
 	});
 </script>
 

@@ -3,15 +3,18 @@
 
 // use ema::Ema;
 
+use std::collections::VecDeque;
+
 use api::kraken::get_market_trades;
-use model::{DeltaCandle, RangeBar};
 
 // use macd::Macd;
 // use model::{AppState, IndicatorState, OHLC};
-use crate::model::{AppState, RangeData};
+use crate::model::AppState;
 use reqwest::Client;
 // use crate::{market::get_asset_info, user::get_symbols};
 use tokio::sync::Mutex;
+
+use range::{Bar,RangeData, range_bar::RangeBar, delta_bar::{DeltaBar, self}};
 // mod api;
 // mod ema;
 // mod indicator;
@@ -42,7 +45,7 @@ fn main() {
             client: Client::new(),
             api_key: std::env::var("API_KEY").unwrap(),
             secret_key: std::env::var("SECRET_KEY").unwrap(),
-            range_data: Mutex::new(RangeData::new(2.0)),
+            range_data: Mutex::new(RangeData::new(0.02)),
         })
         .setup(|app| {
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
@@ -62,7 +65,7 @@ fn main() {
 #[tauri::command]
 async fn app_start(
     app: tauri::State<'_, AppState>,
-) -> Result<(Vec<RangeBar>, Vec<DeltaCandle>), String> {
+) -> Result<(VecDeque<RangeBar>, VecDeque<DeltaBar>), String> {
     let trades = get_market_trades(&app.client).await;
     for trade in trades.iter() {
         app.range_data
@@ -70,15 +73,13 @@ async fn app_start(
             .await
             .update(trade.price, trade.volume, &trade.buy_sell);
 
-        println!("{:?}", trade);
     }
 
-    println!("{:?}", app.range_data.lock().await.range_bars);
 
-    let range_data = app.range_data.lock().await;
+    let (range_bars, delta_bars) = app.range_data.lock().await.get_bars();
 
     Ok((
-        range_data.range_bars.ordered_elements(),
-        range_data.delta_bars.ordered_elements(),
+        range_bars,
+        delta_bars,
     ))
 }
