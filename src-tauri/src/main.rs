@@ -3,9 +3,11 @@
 
 // use ema::Ema;
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
-use api::kraken::get_market_trades;
+use api::kraken::{get_market_trades, KRAKEN_WS_URL};
+use futures::{SinkExt, StreamExt};
+use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 // use macd::Macd;
 // use model::{AppState, IndicatorState, OHLC};
@@ -49,14 +51,12 @@ fn main() {
             client: Client::new(),
             api_key: std::env::var("API_KEY").unwrap(),
             secret_key: std::env::var("SECRET_KEY").unwrap(),
-            range_data: Mutex::new(RangeData::new(0.02)),
+            range_data: Arc::new(Mutex::new(RangeData::new(0.02))),
         })
         .setup(|app| {
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
             // the default value is `main`. note that it must be unique
             // let main_window = app.get_window("main").unwrap();
-
-            // tauri::async_runtime::spawn(test_market_data(main_window));
 
             Ok(())
         })
@@ -72,6 +72,7 @@ async fn app_start(
 ) -> Result<(Vec<RangeBar>, VecDeque<DeltaBar>), String> {
     let trades = get_market_trades(&app.client).await;
     for trade in trades.iter() {
+        println!("Trade:{:?}", trade);
         app.range_data
             .lock()
             .await
@@ -82,7 +83,39 @@ async fn app_start(
 
     let mut sorted_range_bars: Vec<RangeBar> = range_bars.into_iter().collect();
 
+    let ws_range_data = app.range_data.clone();
+
     sorted_range_bars.sort_by_key(|item| item.start_time);
 
+    tauri::async_runtime::spawn(kraken_websocket(ws_range_data));
+
     Ok((sorted_range_bars, delta_bars))
+}
+
+async fn kraken_websocket(range_bars: Arc<Mutex<RangeData>>) {
+    let (mut ws_stream, _) = connect_async(KRAKEN_WS_URL).await.unwrap();
+
+    let subscription_msg = serde_json::json!({
+    "event": "subscribe",
+    "pair": ["SOL/USD"],
+    "subscription": {
+        "name":"trade"
+    }});
+
+    ws_stream
+        .send(tokio_tungstenite::tungstenite::Message::Text(
+            subscription_msg.to_string(),
+        ))
+        .await
+        .unwrap();
+
+    while let Some(msg) = ws_stream.next().await {
+        let event = msg.unwrap();
+        match event {
+            Message::Text(text) => {
+                println!("{}", text)
+            }
+            _ => (),
+        }
+    }
 }

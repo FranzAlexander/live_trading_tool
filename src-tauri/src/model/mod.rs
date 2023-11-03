@@ -1,7 +1,7 @@
 pub mod coinbase;
 pub mod kraken;
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +13,7 @@ pub struct AppState {
     pub client: reqwest::Client,
     pub api_key: String,
     pub secret_key: String,
-    pub range_data: Mutex<RangeData>,
+    pub range_data: Arc<Mutex<RangeData>>,
 }
 
 pub(crate) mod string_or_float {

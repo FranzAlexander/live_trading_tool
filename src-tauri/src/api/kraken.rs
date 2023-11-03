@@ -7,6 +7,8 @@ use crate::model::kraken::{ApiResponse, MarketTrade, MarketTradeResponse};
 
 type HmacSha512 = Hmac<Sha512>;
 
+pub const KRAKEN_WS_URL: &str = "wss://ws.kraken.com";
+
 pub const KRAKEN_API_URL: &str = "https://api.kraken.com";
 pub const KRAKEN_TRADES_ENDPOINT: &str = "/0/public/Trades?pair=";
 
