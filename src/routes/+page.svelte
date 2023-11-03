@@ -24,6 +24,9 @@
 	onMount(async () => {
 		const rangeData: [RangeBar[], DeltaBar[]] = await invoke('app_start');
 
+		console.log(rangeData[0]);
+		
+
 		chart = createChart(chartContainer, {
 			layout: {
 				background: {

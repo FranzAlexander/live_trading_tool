@@ -36,7 +36,6 @@ impl Bar for RangeBar {
                 self.low = self.low.min(price);
 
                 if self.high - self.low >= range {
-                    println!("{}", self.high - self.low);
                     self.close = if price >= self.open {
                         self.high
                     } else {
