@@ -11,7 +11,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 // use macd::Macd;
 // use model::{AppState, IndicatorState, OHLC};
-use crate::model::AppState;
+use crate::model::{kraken::KrakenEvent, AppState};
 use reqwest::Client;
 // use crate::{market::get_asset_info, user::get_symbols};
 use tokio::sync::Mutex;
@@ -72,7 +72,6 @@ async fn app_start(
 ) -> Result<(Vec<RangeBar>, VecDeque<DeltaBar>), String> {
     let trades = get_market_trades(&app.client).await;
     for trade in trades.iter() {
-        println!("Trade:{:?}", trade);
         app.range_data
             .lock()
             .await
@@ -91,6 +90,11 @@ async fn app_start(
 
     Ok((sorted_range_bars, delta_bars))
 }
+
+// {"connectionID":16120049092652252463,"event":"systemStatus","status":"online","version":"1.9.1"}
+// {"channelID":5505,"channelName":"trade","event":"subscriptionStatus","pair":"SOL/USD","status":"subscribed","subscription":{"name":"trade"}}
+// {"event":"heartbeat"}
+// {"event":"heartbeat"}
 
 async fn kraken_websocket(range_bars: Arc<Mutex<RangeData>>) {
     let (mut ws_stream, _) = connect_async(KRAKEN_WS_URL).await.unwrap();
@@ -113,7 +117,9 @@ async fn kraken_websocket(range_bars: Arc<Mutex<RangeData>>) {
         let event = msg.unwrap();
         match event {
             Message::Text(text) => {
-                println!("{}", text)
+                println!("{}",text);
+                let kraken_event: KrakenEvent = serde_json::from_str(&text).unwrap();
+                println!("{:?}", kraken_event);
             }
             _ => (),
         }
