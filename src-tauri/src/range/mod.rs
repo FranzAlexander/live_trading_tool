@@ -11,9 +11,16 @@ pub trait Bar {
     fn reset(&mut self);
 }
 
+#[derive(serde::Serialize, Clone)]
+pub struct RangePayload {
+    pub range_bar: RangeBar,
+    pub delta_bar: DeltaBar,
+}
+
 pub struct RangeData {
     pub range: f64,
     pub current_bar: Option<RangeBar>,
+    pub current_delta_bar: Option<DeltaBar>,
     pub range_bars: VecDeque<RangeBar>,
     pub delta_bars: VecDeque<DeltaBar>,
     pub count: usize,
@@ -24,21 +31,25 @@ impl RangeData {
         RangeData {
             range,
             current_bar: None,
+            current_delta_bar: None,
             range_bars: VecDeque::with_capacity(400),
             delta_bars: VecDeque::with_capacity(400),
             count: 0,
         }
     }
 
-    pub fn update(&mut self, price: f64, size: f64, side: &str, time: f64) {
-        let delta = match side {
-            "b" => size,
-            "s" => -size,
-            _ => 0.0,
-        };
+    pub fn update(
+        &mut self,
+        price: f64,
+        size: f64,
+        side: &str,
+        time: f64,
+    ) -> (Option<RangeBar>, Option<DeltaBar>) {
+        let delta = if side == "b" { size } else { -size };
 
-        if let Some(bar) = &mut self.current_bar {
-            bar.update(price);
+        if let (Some(bar), Some(delta_bar)) = (&mut self.current_bar, &mut self.current_delta_bar) {
+            bar.update(price, size);
+            delta_bar.update(delta);
             if bar.is_complete(self.range) {
                 let new_start_time = if (time as i64) <= bar.start_time {
                     bar.start_time + 1
@@ -46,73 +57,26 @@ impl RangeData {
                     time as i64
                 };
                 self.range_bars.push_back(bar.clone());
-                self.current_bar = Some(RangeBar::new(price, new_start_time));
+                self.delta_bars.push_back(delta_bar.clone());
+                self.current_bar = Some(RangeBar::new(price, size, new_start_time));
+                self.current_delta_bar = Some(DeltaBar::new(
+                    new_start_time,
+                    delta_bar.cumulative_delta + delta,
+                ));
+                return (
+                    Some(self.range_bars.back().unwrap().clone()),
+                    Some(self.delta_bars.back().unwrap().clone()),
+                );
             }
         } else {
-            self.current_bar = Some(RangeBar::new(price, time as i64))
+            self.current_bar = Some(RangeBar::new(price, size, time as i64));
+            self.current_delta_bar = Some(DeltaBar::new(time as i64, delta));
         };
 
-        // Update or create a new RangeBar if necessary
-        // match self.range_bars.back_mut() {
-        //     Some(last_bar) => {
-        //         if !last_bar.update(price, self.range, time) {
-        //             // Check if the price has moved sufficiently away from the last bar's close
-        //             if (price - last_bar.close).abs() >= self.range {
-        //                 // Efficient capacity management
-        //                 if self.range_bars.len() >= self.range_bars.capacity() {
-        //                     self.range_bars.pop_front();
-        //                 }
-        //                 self.range_bars.push_back(self.create_new_bar(price, time));
-        //             }
-        //         }
-        //     }
-        //     None => {
-        //         // If there are no bars, create the first one
-        //         self.range_bars.push_back(self.create_new_bar(price, time));
-        //     }
-        // }
-
-        // // Update or create a new RangeBar if necessary
-        // if self.range_bars.is_empty()
-        //     || !self
-        //         .range_bars
-        //         .back_mut()
-        //         .unwrap()
-        //         .update(price, self.range)
-        // {
-        //     if self.range_bars.len() == self.range_bars.capacity() {
-        //         self.range_bars.pop_front();
-        //     }
-        //     let mut new_bar = RangeBar::new();
-        //     new_bar.update(price, self.range); // Initialize the new bar with the current price
-        //     self.range_bars.push_back(new_bar);
-        // }
-
-        // Update or create a new DeltaBar if necessary
-        if self.delta_bars.is_empty()
-            || !self
-                .delta_bars
-                .back_mut()
-                .unwrap()
-                .update(delta, self.range, time)
-        {
-            if self.delta_bars.len() == self.delta_bars.capacity() {
-                self.delta_bars.pop_front();
-            }
-            let mut new_bar = DeltaBar::new();
-            new_bar.update(delta, self.range, time); // Initialize the new bar with the current delta
-            self.delta_bars.push_back(new_bar);
-        }
+        (None, None)
     }
 
     pub fn get_bars(&self) -> (VecDeque<RangeBar>, VecDeque<DeltaBar>) {
         (self.range_bars.clone(), self.delta_bars.clone())
     }
-
-    // Function to create and initialize a new bar
-    // fn create_new_bar(&self, price: f64, time: f64) -> RangeBar {
-    //     let mut new_bar = RangeBar::new();
-    //     new_bar.update(price, self.range, time); // Initialize the new bar with the current price
-    //     new_bar
-    // }
 }

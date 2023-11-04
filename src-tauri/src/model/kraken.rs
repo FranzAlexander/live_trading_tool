@@ -8,7 +8,7 @@ pub enum KrakenEvent {
     Connection(ConnectionMessage),
     Subscription(SubscribeMessage),
     Heartbeat(HeartbeatMessage),
-    MarketOrder(Vec<MarketTradeMessage>)
+    MarketOrder(MarketTradeMessage),
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

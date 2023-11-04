@@ -7,6 +7,7 @@ use std::{collections::VecDeque, sync::Arc};
 
 use api::kraken::{get_market_trades, KRAKEN_WS_URL};
 use futures::{SinkExt, StreamExt};
+use tauri::Manager;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 // use macd::Macd;
@@ -19,7 +20,7 @@ use tokio::sync::Mutex;
 use range::{
     delta_bar::{self, DeltaBar},
     range_bar::RangeBar,
-    Bar, RangeData,
+    Bar, RangeData, RangePayload,
 };
 // mod api;
 // mod ema;
@@ -51,7 +52,7 @@ fn main() {
             client: Client::new(),
             api_key: std::env::var("API_KEY").unwrap(),
             secret_key: std::env::var("SECRET_KEY").unwrap(),
-            range_data: Arc::new(Mutex::new(RangeData::new(0.02))),
+            range_data: Arc::new(Mutex::new(RangeData::new(2.0 / 100.0))),
         })
         .setup(|app| {
             // `main` here is the window label; it is defined on the window creation or under `tauri.conf.json`
@@ -69,7 +70,8 @@ fn main() {
 #[tauri::command]
 async fn app_start(
     app: tauri::State<'_, AppState>,
-) -> Result<(Vec<RangeBar>, VecDeque<DeltaBar>), String> {
+    app_handle: tauri::AppHandle,
+) -> Result<(Vec<RangeBar>, Vec<DeltaBar>), String> {
     let trades = get_market_trades(&app.client).await;
     for trade in trades.iter() {
         app.range_data
@@ -82,21 +84,19 @@ async fn app_start(
 
     let mut sorted_range_bars: Vec<RangeBar> = range_bars.into_iter().collect();
 
+    let mut sorted_delta_bars: Vec<DeltaBar> = delta_bars.into_iter().collect();
+
     let ws_range_data = app.range_data.clone();
 
     sorted_range_bars.sort_by_key(|item| item.start_time);
+    sorted_delta_bars.sort_by_key(|item| item.start_time);
 
-    tauri::async_runtime::spawn(kraken_websocket(ws_range_data));
+    tauri::async_runtime::spawn(kraken_websocket(ws_range_data, app_handle));
 
-    Ok((sorted_range_bars, delta_bars))
+    Ok((sorted_range_bars, sorted_delta_bars))
 }
 
-// {"connectionID":16120049092652252463,"event":"systemStatus","status":"online","version":"1.9.1"}
-// {"channelID":5505,"channelName":"trade","event":"subscriptionStatus","pair":"SOL/USD","status":"subscribed","subscription":{"name":"trade"}}
-// {"event":"heartbeat"}
-// {"event":"heartbeat"}
-
-async fn kraken_websocket(range_bars: Arc<Mutex<RangeData>>) {
+async fn kraken_websocket(range_bars: Arc<Mutex<RangeData>>, app_handle: tauri::AppHandle) {
     let (mut ws_stream, _) = connect_async(KRAKEN_WS_URL).await.unwrap();
 
     let subscription_msg = serde_json::json!({
@@ -117,9 +117,38 @@ async fn kraken_websocket(range_bars: Arc<Mutex<RangeData>>) {
         let event = msg.unwrap();
         match event {
             Message::Text(text) => {
-                println!("{}",text);
                 let kraken_event: KrakenEvent = serde_json::from_str(&text).unwrap();
-                println!("{:?}", kraken_event);
+
+                match kraken_event {
+                    KrakenEvent::MarketOrder(order) => {
+                        let mut range_bar_lock = range_bars.lock().await;
+                        for trade in order.trades {
+                            let new_bar = range_bar_lock.update(
+                                trade.price,
+                                trade.volume,
+                                &trade.side,
+                                trade.time,
+                            );
+
+                            if let (Some(range_bar), Some(delta_bar)) = new_bar {
+                                let _ = app_handle.emit_all("new_bar", range_bar);
+                                let _ = app_handle.emit_all("new_delta_bar", delta_bar);
+                            }
+
+                            // let _ = match new_bar {
+                            //     (Some(bar), Some(delta_bar)) => {
+                            //         let range_payload = RangePayload {
+                            //             range_bar: bar,
+                            //             delta_bar,
+                            //         };
+                            //         app_handle.emit_all("new_bar", bar);
+                            //     }
+                            //     _ => Ok(),
+                            // };
+                        }
+                    }
+                    _ => (),
+                }
             }
             _ => (),
         }
