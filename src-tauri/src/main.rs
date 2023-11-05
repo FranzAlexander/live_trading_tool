@@ -113,8 +113,24 @@ async fn kraken_websocket(range_bars: Arc<Mutex<RangeData>>, app_handle: tauri::
         .await
         .unwrap();
 
+    let subscription_msg = serde_json::json!({
+    "event": "subscribe",
+    "pair": ["SOL/USD"],
+    "subscription": {
+        "name":"ohlc",
+        "interval":1
+    }});
+
+    ws_stream
+        .send(tokio_tungstenite::tungstenite::Message::Text(
+            subscription_msg.to_string(),
+        ))
+        .await
+        .unwrap();
+
     while let Some(msg) = ws_stream.next().await {
         let event = msg.unwrap();
+
         match event {
             Message::Text(text) => {
                 let kraken_event: KrakenEvent = serde_json::from_str(&text).unwrap();
@@ -134,18 +150,10 @@ async fn kraken_websocket(range_bars: Arc<Mutex<RangeData>>, app_handle: tauri::
                                 let _ = app_handle.emit_all("new_bar", range_bar);
                                 let _ = app_handle.emit_all("new_delta_bar", delta_bar);
                             }
-
-                            // let _ = match new_bar {
-                            //     (Some(bar), Some(delta_bar)) => {
-                            //         let range_payload = RangePayload {
-                            //             range_bar: bar,
-                            //             delta_bar,
-                            //         };
-                            //         app_handle.emit_all("new_bar", bar);
-                            //     }
-                            //     _ => Ok(),
-                            // };
                         }
+                    }
+                    KrakenEvent::OhlcEvent(ohlc) => {
+                        println!("{:?}", ohlc);
                     }
                     _ => (),
                 }

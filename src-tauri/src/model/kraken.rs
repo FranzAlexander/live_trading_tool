@@ -9,6 +9,7 @@ pub enum KrakenEvent {
     Subscription(SubscribeMessage),
     Heartbeat(HeartbeatMessage),
     MarketOrder(MarketTradeMessage),
+    OhlcEvent(OhlcMessage),
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -35,6 +36,8 @@ pub struct SubscribeMessage {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct SubscriptionMessage {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interval: Option<i64>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -61,6 +64,35 @@ pub struct MarketOrderMessage {
     pub side: String,
     pub order_type: String,
     pub misc: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct OhlcMessage {
+    pub id: i64,
+    pub ohlc: OhlcCandleMessage,
+    pub name: String,
+    pub pair: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct OhlcCandleMessage {
+    #[serde(with = "string_or_float")]
+    pub time: f64,
+    #[serde(with = "string_or_float")]
+    pub etime: f64,
+    #[serde(with = "string_or_float")]
+    pub open: f64,
+    #[serde(with = "string_or_float")]
+    pub high: f64,
+    #[serde(with = "string_or_float")]
+    pub low: f64,
+    #[serde(with = "string_or_float")]
+    pub close: f64,
+    #[serde(with = "string_or_float")]
+    pub vwap: f64,
+    #[serde(with = "string_or_float")]
+    pub volume: f64,
+    pub count: i64,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -95,3 +127,8 @@ pub struct MarketTrade {
     pub misc: String,
     pub trade_id: i64,
 }
+
+// #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+// pub struct OhlcRespoinse{
+//     pub
+// }

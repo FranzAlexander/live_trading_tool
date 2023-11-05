@@ -14,6 +14,7 @@
 		type Time
 	} from 'lightweight-charts';
 	import { listen } from '@tauri-apps/api/event';
+	import RangeChart from '$lib/components/charts/RangeChart.svelte';
 
 	$: loaded = false;
 
@@ -26,6 +27,8 @@
 	let chartContainer: HTMLElement;
 
 	let deltaChartContainer: HTMLElement;
+
+	let rangeBarCandles: { time: Time; open: number; high: number; low: number; close: number }[];
 
 	listen('tauri://resize', (event) => {
 		chart.resize(chartContainer.clientWidth, chartContainer.clientHeight);
@@ -101,7 +104,6 @@
 
 			priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
 		});
-
 		deltaBars = deltaChart.addCandlestickSeries({
 			upColor: '#00CC00',
 			downColor: '#CC0000',
@@ -112,7 +114,7 @@
 			priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
 		});
 
-		const chartData = rangeData[0].map((item) => {
+		rangeBarCandles = rangeData[0].map((item) => {
 			return {
 				time: item.start_time as Time, // Use the formatted time
 				open: Number(item.open),
@@ -132,7 +134,7 @@
 			};
 		});
 
-		rangeBars.setData(chartData);
+		// rangeBars.setData(chartData);
 		deltaBars.setData(deltaData);
 
 		chart.timeScale().fitContent();
@@ -144,20 +146,20 @@
 		loaded = true;
 	});
 
-	listen('new_bar', ({ payload }) => {
-		const bar = payload as RangeBar;
-		console.log(bar);
+	// listen('new_bar', ({ payload }) => {
+	// 	const bar = payload as RangeBar;
+	// 	console.log(bar);
 
-		let newRangeBar = {
-			time: bar.start_time as Time, // Use the formatted time
-			open: Number(bar.open),
-			high: Number(bar.high),
-			low: Number(bar.low),
-			close: Number(bar.close)
-		};
+	// 	let newRangeBar = {
+	// 		time: bar.start_time as Time, // Use the formatted time
+	// 		open: Number(bar.open),
+	// 		high: Number(bar.high),
+	// 		low: Number(bar.low),
+	// 		close: Number(bar.close)
+	// 	};
 
-		rangeBars.update(newRangeBar);
-	});
+	// 	rangeBars.update(newRangeBar);
+	// });
 
 	listen('new_delta_bar', ({ payload }) => {
 		const deltaBar = payload as DeltaBar;
@@ -176,7 +178,10 @@
 </script>
 
 <main>
-	<div bind:this={chartContainer} />
+	<!-- <div bind:this={chartContainer} /> -->
+	{#if loaded}
+		<RangeChart rangeBarData={rangeBarCandles} />
+	{/if}
 	<div bind:this={deltaChartContainer} />
 </main>
 
