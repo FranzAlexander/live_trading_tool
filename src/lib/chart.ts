@@ -52,6 +52,11 @@ export function createMainCandleChart(chartContainer: HTMLElement): IChartApi {
 				color: '#0000CC',
 				labelBackgroundColor: '#0000CC'
 			}
-		}
+		},
+		timeScale: {
+			timeVisible: true,
+			secondsVisible: true
+		},
+		rightPriceScale: { autoScale: true }
 	});
 }

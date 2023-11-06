@@ -4,117 +4,39 @@
 	import { invoke } from '@tauri-apps/api/tauri';
 	import WatchedAssets from '$lib/components/WatchedAssets.svelte';
 	import type { DeltaBar, RangeBar, RangeBarPayload } from '$lib/range';
-	import {
-		ColorType,
-		createChart,
-		CrosshairMode,
-		LineStyle,
-		type IChartApi,
-		type ISeriesApi,
-		type Time
-	} from 'lightweight-charts';
+
 	import { listen } from '@tauri-apps/api/event';
-	import RangeChart from '$lib/components/charts/RangeChart.svelte';
+	import { candlestickConfig, createMainCandleChart } from '$lib/chart';
+	import type { IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 
 	$: loaded = false;
 
-	let chart: IChartApi;
+	let rangeChart: IChartApi;
 	let rangeBars: ISeriesApi<'Candlestick'>;
 
 	let deltaChart: IChartApi;
 	let deltaBars: ISeriesApi<'Candlestick'>;
 
-	let chartContainer: HTMLElement;
+	let rangeChartContainer: HTMLElement;
 
 	let deltaChartContainer: HTMLElement;
 
 	let rangeBarCandles: { time: Time; open: number; high: number; low: number; close: number }[];
 
 	listen('tauri://resize', (event) => {
-		chart.resize(chartContainer.clientWidth, chartContainer.clientHeight);
+		rangeChart.resize(rangeChartContainer.clientWidth, rangeChartContainer.clientHeight);
 	});
 
 	onMount(async () => {
 		const rangeData: [RangeBar[], DeltaBar[]] = await invoke('app_start');
 
-		chart = createChart(chartContainer, {
-			layout: {
-				background: {
-					type: ColorType.Solid,
-					color: '#000'
-				},
-				textColor: '#DDD'
-			},
-			grid: { vertLines: { color: '#444' }, horzLines: { color: '#444' } },
-			crosshair: {
-				mode: CrosshairMode.Normal,
-				vertLine: {
-					color: '#C3BCDB44',
-					style: LineStyle.Solid,
-					width: 4,
-					labelBackgroundColor: '#0000CC'
-				},
-				horzLine: {
-					color: '#0000CC',
-					labelBackgroundColor: '#0000CC'
-				}
-			},
-			timeScale: {
-				timeVisible: true,
-				secondsVisible: true
-			}
-		});
+		rangeChart = createMainCandleChart(rangeChartContainer);
+		deltaChart = createMainCandleChart(deltaChartContainer);
 
-		deltaChart = createChart(deltaChartContainer, {
-			layout: {
-				background: {
-					type: ColorType.Solid,
-					color: '#000'
-				},
-				textColor: '#DDD'
-			},
-			grid: { vertLines: { color: '#444' }, horzLines: { color: '#444' } },
-			crosshair: {
-				mode: CrosshairMode.Normal,
-				vertLine: {
-					color: '#C3BCDB44',
-					style: LineStyle.Solid,
-					width: 4,
-					labelBackgroundColor: '#0000CC'
-				},
-				horzLine: {
-					color: '#0000CC',
-					labelBackgroundColor: '#0000CC'
-				}
-			},
-			timeScale: {
-				timeVisible: true,
-				secondsVisible: true
-			},
+		rangeBars = rangeChart.addCandlestickSeries(candlestickConfig);
+		deltaBars = deltaChart.addCandlestickSeries(candlestickConfig);
 
-			rightPriceScale: { autoScale: true }
-		});
-
-		rangeBars = chart.addCandlestickSeries({
-			upColor: '#00CC00',
-			downColor: '#CC0000',
-			borderVisible: false,
-			wickUpColor: '#00CC00',
-			wickDownColor: '#CC0000',
-
-			priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
-		});
-		deltaBars = deltaChart.addCandlestickSeries({
-			upColor: '#00CC00',
-			downColor: '#CC0000',
-			borderVisible: false,
-			wickUpColor: '#00CC00',
-			wickDownColor: '#CC0000',
-
-			priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
-		});
-
-		rangeBarCandles = rangeData[0].map((item) => {
+		const chartData = rangeData[0].map((item) => {
 			return {
 				time: item.start_time as Time, // Use the formatted time
 				open: Number(item.open),
@@ -134,11 +56,11 @@
 			};
 		});
 
-		// rangeBars.setData(chartData);
+		rangeBars.setData(chartData);
 		deltaBars.setData(deltaData);
 
-		chart.timeScale().fitContent();
-		chart.timeScale().scrollToRealTime();
+		rangeChart.timeScale().fitContent();
+		rangeChart.timeScale().scrollToRealTime();
 
 		deltaChart.timeScale().fitContent();
 		deltaChart.timeScale().scrollToRealTime();
@@ -146,20 +68,20 @@
 		loaded = true;
 	});
 
-	// listen('new_bar', ({ payload }) => {
-	// 	const bar = payload as RangeBar;
-	// 	console.log(bar);
+	listen('new_bar', ({ payload }) => {
+		const bar = payload as RangeBar;
+		console.log(bar);
 
-	// 	let newRangeBar = {
-	// 		time: bar.start_time as Time, // Use the formatted time
-	// 		open: Number(bar.open),
-	// 		high: Number(bar.high),
-	// 		low: Number(bar.low),
-	// 		close: Number(bar.close)
-	// 	};
+		let newRangeBar = {
+			time: bar.start_time as Time, // Use the formatted time
+			open: Number(bar.open),
+			high: Number(bar.high),
+			low: Number(bar.low),
+			close: Number(bar.close)
+		};
 
-	// 	rangeBars.update(newRangeBar);
-	// });
+		rangeBars.update(newRangeBar);
+	});
 
 	listen('new_delta_bar', ({ payload }) => {
 		const deltaBar = payload as DeltaBar;
@@ -178,14 +100,9 @@
 </script>
 
 <main>
-	<!-- <div bind:this={chartContainer} /> -->
-	{#if loaded}
-		<RangeChart rangeBarData={rangeBarCandles} />
-	{/if}
+	<div bind:this={rangeChartContainer} />
 	<div bind:this={deltaChartContainer} />
 </main>
-
-<!-- <WatchedAssets symbols={watched_symbols} /> -->
 
 <style>
 	main {
