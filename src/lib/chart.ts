@@ -27,6 +27,24 @@ export const candlestickConfig: DeepPartial<CandlestickStyleOptions & SeriesOpti
 	priceFormat: priceFormatConfig // Use the defined priceFormatConfig here
 };
 
+export function createCandlestickConfig(
+	precision: number,
+	minMove: number
+): DeepPartial<CandlestickStyleOptions & SeriesOptionsCommon> {
+	return {
+		upColor: '#00CC00',
+		downColor: '#CC0000',
+		borderVisible: false,
+		wickUpColor: '#00CC00',
+		wickDownColor: '#CC0000',
+		priceFormat: {
+			type: 'price',
+			precision: precision,
+			minMove: minMove
+		}
+	};
+}
+
 export function createMainCandleChart(chartContainer: HTMLElement): IChartApi {
 	return createChart(chartContainer, {
 		layout: {

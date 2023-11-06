@@ -54,31 +54,14 @@ export const coinIcons: Record<CoinName, unknown> = {
 
 export type OrderType = 'buy' | 'sell';
 
-// export function isExtendedBalances(data: any): data is ExtendedBalances {
-// 	const potentialBalance = (data as ExtendedBalances)[Object.keys(data)[0]];
-// 	return data && typeof data === 'object' && 'balance' in potentialBalance;
-// }
-
-// export function isTradeBalance(data: any): data is TradeBalance {
-// 	return data && typeof data === 'object' && 'equivalent' in data;
-// }
-
-// export function mapToChartFormat(
-// 	data: Array<OhlcEventPayload['message'][number]>
-// ): ChartDataItem[] {
-// 	return data.map((item) => {
-// 		const dateObj = new Date(item.time * 1000); // Convert UNIX timestamp to Date object
-
-// 		const year = dateObj.getUTCFullYear();
-// 		const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0'); // Months are 0-based
-// 		const day = String(dateObj.getUTCDate()).padStart(2, '0');
-
-// 		return {
-// 			time: `${year}-${month}-${day}`,
-// 			open: item.open,
-// 			high: item.high,
-// 			low: item.low,
-// 			close: item.close
-// 		};
-// 	});
-// }
+export type OhlcPayload = {
+	name: string;
+	time: number;
+	etime: number;
+	open: number;
+	high: number;
+	low: number;
+	close: number;
+	vwap: number;
+	volume: number;
+};

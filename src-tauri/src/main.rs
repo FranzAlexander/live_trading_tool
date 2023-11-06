@@ -12,7 +12,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 // use macd::Macd;
 // use model::{AppState, IndicatorState, OHLC};
-use crate::model::{kraken::KrakenEvent, AppState};
+use crate::model::{kraken::KrakenEvent, payload::OhlcPayload, AppState};
 use reqwest::Client;
 // use crate::{market::get_asset_info, user::get_symbols};
 use tokio::sync::Mutex;
@@ -30,6 +30,7 @@ use range::{
 // // mod model;
 // mod user;
 mod api;
+mod chart;
 mod model;
 mod range;
 mod rolling_window;
@@ -153,7 +154,10 @@ async fn kraken_websocket(range_bars: Arc<Mutex<RangeData>>, app_handle: tauri::
                         }
                     }
                     KrakenEvent::OhlcEvent(ohlc) => {
-                        println!("{:?}", ohlc);
+                        if ohlc.name == "ohlc-1" {
+                            let payload = OhlcPayload::from(ohlc);
+                            let _ = app_handle.emit_all("oneMinOhlc", payload);
+                        }
                     }
                     _ => (),
                 }

@@ -1,5 +1,6 @@
 pub mod coinbase;
 pub mod kraken;
+pub mod payload;
 
 use std::{collections::VecDeque, sync::Arc};
 
