@@ -7,7 +7,8 @@
 	import { listen } from '@tauri-apps/api/event';
 	import { candlestickConfig, createCandlestickConfig, createMainCandleChart } from '$lib/chart';
 	import type { IChartApi, ISeriesApi, Time } from 'lightweight-charts';
-	import type { OhlcPayload } from '$lib';
+	import type { ExtendedBalances, ExtendedDetails, OhlcPayload } from '$lib';
+	import TradingOrderPanel from '$lib/components/TradingOrderPanel.svelte';
 
 	$: loaded = false;
 
@@ -19,6 +20,8 @@
 
 	let oneMinChart: IChartApi;
 	let oneMinBars: ISeriesApi<'Candlestick'>;
+	let oneMinDeltaChart: IChartApi;
+	let oneMinDeltaBars: ISeriesApi<'Candlestick'>;
 
 	let rangeChartContainer: HTMLElement;
 
@@ -26,22 +29,41 @@
 
 	let oneMainChartContainer: HTMLElement;
 
+	let oneMinDeltaChartContainer: HTMLElement;
+
+	$: usdBalance = {} as ExtendedDetails;
+	$: solBalance = {} as ExtendedDetails;
+
 	listen('tauri://resize', (event) => {
 		rangeChart.resize(rangeChartContainer.clientWidth, rangeChartContainer.clientHeight);
 		deltaChart.resize(deltaChartContainer.clientWidth, deltaChartContainer.clientHeight);
 		oneMinChart.resize(oneMainChartContainer.clientWidth, oneMainChartContainer.clientHeight);
+		oneMinDeltaChart.resize(
+			oneMinDeltaChartContainer.clientWidth,
+			oneMinDeltaChartContainer.clientHeight
+		);
 	});
 
 	onMount(async () => {
+		const extendedBalance = (await invoke('get_extended_balance')) as ExtendedBalances;
+		usdBalance = extendedBalance['ZUSD'];
+		solBalance = extendedBalance['SOL'];
+
+		const assetPairInfo = await invoke('get_tradeable_asset_pair');
+
+		console.log(assetPairInfo);
+
 		const rangeData: [RangeBar[], DeltaBar[]] = await invoke('app_start');
 
 		rangeChart = createMainCandleChart(rangeChartContainer);
 		deltaChart = createMainCandleChart(deltaChartContainer);
 		oneMinChart = createMainCandleChart(oneMainChartContainer);
+		oneMinDeltaChart = createMainCandleChart(oneMinDeltaChartContainer);
 
 		rangeBars = rangeChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
 		deltaBars = deltaChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
 		oneMinBars = oneMinChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
+		oneMinDeltaBars = oneMinDeltaChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
 
 		const chartData = rangeData[0].map((item) => {
 			return {
@@ -74,6 +96,9 @@
 
 		oneMinChart.timeScale().fitContent();
 		oneMinChart.timeScale().scrollToRealTime();
+
+		oneMinDeltaChart.timeScale().fitContent();
+		oneMinDeltaChart.timeScale().scrollToRealTime();
 
 		loaded = true;
 	});
@@ -109,8 +134,6 @@
 	listen('oneMinOhlc', ({ payload }) => {
 		const ohlcBar = payload as OhlcPayload;
 
-		console.log(ohlcBar);
-
 		let newOhlcBar = {
 			time: ohlcBar.time as Time,
 			open: Number(ohlcBar.open),
@@ -121,9 +144,32 @@
 
 		oneMinBars.update(newOhlcBar);
 	});
+
+	listen('oneMinCVD', ({ payload }) => {
+		const deltaBar = payload as DeltaBar;
+
+		let newDeltaBar = {
+			time: deltaBar.start_time as Time,
+			open: Number(deltaBar.open),
+			high: Number(deltaBar.high),
+			low: Number(deltaBar.low),
+			close: Number(deltaBar.close)
+		};
+		oneMinDeltaBars.update(newDeltaBar);
+	});
 </script>
 
 <main class="w-[100vw] h-[100vh] overflow-none p-1 flex-col">
+	<div class="w-full h-10 flex">
+		<div class="flex">
+			<h2 class="text-white">USD:</h2>
+			<span class="text-white">${usdBalance.balance}</span>
+		</div>
+		<div class="flex">
+			<h2 class="text-white">SOL:</h2>
+			<span class="text-white">{solBalance.balance}</span>
+		</div>
+	</div>
 	<div class="h-2/3 w-full flex">
 		<div class="h-full w-1/2">
 			<div class="w-full h-2/3" bind:this={rangeChartContainer} />
@@ -131,27 +177,10 @@
 		</div>
 		<div class="h-full w-1/2">
 			<div class="w-full h-2/3" bind:this={oneMainChartContainer} />
+			<div class="w-full h-1/3" bind:this={oneMinDeltaChartContainer} />
 		</div>
 	</div>
+	<div class="w-full">
+		<TradingOrderPanel />
+	</div>
 </main>
-
-<style>
-	/* main {
-		width: 100vw;
-		height: 100vh;
-		/* display: flex; */
-	/* flex-direction: column; */
-	/* gap: 1rem;
-		grid-template-columns: 15% minmax(0, 2fr) minmax(0, 1fr) 15%;
-		grid-template-rows: 10% 40% repeat(2, minmax(0, 1fr)); 
-		padding: 1rem;
-		overflow: hidden; }*/
-
-	/* main > div:nth-child(1) {
-		height: 50%;
-	}
-
-	main > div:nth-child(2) {
-		height: 30%;
-	} */
-</style>

@@ -1,5 +1,6 @@
 use crate::range::delta_bar::DeltaBar;
 
+#[derive(Clone, serde::Serialize)]
 pub struct MinData {
     pub name: String,
     pub end_time: i64,
@@ -38,5 +39,13 @@ impl MinData {
         }
 
         None
+    }
+
+    pub fn update_end_time(&mut self, end_time: i64) {
+        self.end_time = end_time;
+    }
+
+    pub fn get_cvd(&self) -> Option<DeltaBar> {
+        self.cumlutive_delta.clone()
     }
 }

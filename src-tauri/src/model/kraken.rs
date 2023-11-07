@@ -128,7 +128,50 @@ pub struct MarketTrade {
     pub trade_id: i64,
 }
 
-// #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-// pub struct OhlcRespoinse{
-//     pub
-// }
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
+pub struct ExtendedBalance {
+    #[serde(with = "string_or_float")]
+    pub balance: f64,
+    #[serde(with = "string_or_float")]
+    pub hold_trade: f64,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct PairInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    altname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wsname: Option<String>,
+    aclass_base: String,
+    base: String,
+    aclass_quote: String,
+    quote: String,
+    lot: String,
+    pair_decimals: i32,
+    cost_decimals: i32,
+    lot_decimals: i32,
+    lot_multiplier: i32,
+    leverage_buy: Vec<i32>,
+    leverage_sell: Vec<i32>,
+    fees: Vec<Fees>,
+    fees_maker: Vec<Fees>,
+    fee_volume_currency: String,
+    margin_call: i32,
+    margin_stop: i32,
+    #[serde(with = "string_or_float")]
+    ordermin: f64,
+    #[serde(with = "string_or_float")]
+    costmin: f64,
+    #[serde(with = "string_or_float")]
+    tick_size: f64,
+    status: String,
+    long_position_limit: i32,
+    short_position_limit: i32,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct Fees {
+    pub volume: i32,
+    #[serde(with = "string_or_float")]
+    pub fee: f64,
+}

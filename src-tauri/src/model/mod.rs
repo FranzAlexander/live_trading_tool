@@ -8,13 +8,14 @@ use serde::{Deserialize, Serialize};
 
 use tokio::sync::Mutex;
 
-use crate::range::RangeData;
+use crate::{chart::MinData, range::RangeData};
 
 pub struct AppState {
     pub client: reqwest::Client,
     pub api_key: String,
     pub secret_key: String,
     pub range_data: Arc<Mutex<RangeData>>,
+    pub one_min_data: Arc<Mutex<MinData>>,
 }
 
 pub(crate) mod string_or_float {

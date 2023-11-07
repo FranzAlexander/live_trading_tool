@@ -1,9 +1,17 @@
 use hmac::{Hmac, Mac, NewMac};
-use reqwest::{header::HeaderMap, Client};
+use reqwest::{
+    header::{HeaderMap, HeaderValue},
+    Client,
+};
 use sha2::{Digest, Sha256, Sha512};
 use std::{collections::HashMap, time::SystemTime};
 
-use crate::model::kraken::{ApiResponse, MarketTrade, MarketTradeResponse};
+use crate::model::{
+    kraken::{
+        ApiResponse, ApiResponseMap, ExtendedBalance, MarketTrade, MarketTradeResponse, PairInfo,
+    },
+    AppState,
+};
 
 type HmacSha512 = Hmac<Sha512>;
 
@@ -11,6 +19,8 @@ pub const KRAKEN_WS_URL: &str = "wss://ws.kraken.com";
 
 pub const KRAKEN_API_URL: &str = "https://api.kraken.com";
 pub const KRAKEN_TRADES_ENDPOINT: &str = "/0/public/Trades?pair=";
+const KRAKEN_EXT_BALANCE_ENDPOINT: &str = "/0/private/BalanceEx";
+const KRAKEN_TRADEABLE_PAIR_ENDPOINT: &str = "/0/public/AssetPairs?pair=";
 
 pub async fn post_request<T: for<'de> serde::Deserialize<'de>>(
     client: &Client,
@@ -87,4 +97,42 @@ pub async fn get_market_trades(client: &reqwest::Client) -> Vec<MarketTrade> {
     }
 
     Vec::new()
+}
+
+#[tauri::command]
+pub async fn get_extended_balance(
+    state: tauri::State<'_, AppState>,
+) -> Result<HashMap<std::string::String, ExtendedBalance>, String> {
+    let api_key = &state.api_key;
+
+    let mut data = HashMap::new();
+    data.insert("nonce".to_string(), get_nonce().to_string());
+
+    let (post_data, sign) =
+        get_kraken_signature(KRAKEN_EXT_BALANCE_ENDPOINT, &data, &state.secret_key);
+
+    let mut headers = HeaderMap::new();
+    headers.insert("API-Key", HeaderValue::from_str(&api_key).unwrap());
+    headers.insert("API-Sign", HeaderValue::from_str(&sign).unwrap());
+
+    let url = format!("{}{}", KRAKEN_API_URL, KRAKEN_EXT_BALANCE_ENDPOINT);
+
+    let res =
+        post_request::<ApiResponseMap<ExtendedBalance>>(&state.client, &url, headers, post_data)
+            .await;
+
+    Ok(res.result)
+}
+
+#[tauri::command]
+pub async fn get_tradeable_asset_pair(
+    state: tauri::State<'_, AppState>,
+) -> Result<PairInfo, String> {
+    let url = format!(
+        "{}{}{}",
+        KRAKEN_API_URL, KRAKEN_TRADEABLE_PAIR_ENDPOINT, "SOLUSD"
+    );
+
+    let response = get_request::<ApiResponseMap<PairInfo>>(&state.client, &url).await;
+    Ok(response.result.get("SOLUSD").unwrap().clone())
 }
