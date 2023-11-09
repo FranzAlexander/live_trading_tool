@@ -16,6 +16,7 @@ pub struct AppState {
     pub secret_key: String,
     pub range_data: Arc<Mutex<RangeData>>,
     pub one_min_data: Arc<Mutex<MinData>>,
+    pub five_min_data: Arc<Mutex<MinData>>,
 }
 
 pub(crate) mod string_or_float {

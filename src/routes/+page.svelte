@@ -23,6 +23,11 @@
 	let oneMinDeltaChart: IChartApi;
 	let oneMinDeltaBars: ISeriesApi<'Candlestick'>;
 
+	let fiveMinChart: IChartApi;
+	let fiveMinBars: ISeriesApi<'Candlestick'>;
+	let fiveMinDeltaChart: IChartApi;
+	let fiveMinDeltaBars: ISeriesApi<'Candlestick'>;
+
 	let rangeChartContainer: HTMLElement;
 
 	let deltaChartContainer: HTMLElement;
@@ -30,6 +35,10 @@
 	let oneMainChartContainer: HTMLElement;
 
 	let oneMinDeltaChartContainer: HTMLElement;
+
+	let fiveMainChartContainer: HTMLElement;
+
+	let fiveMinDeltaChartContainer: HTMLElement;
 
 	$: usdBalance = {} as ExtendedDetails;
 	$: solBalance = {} as ExtendedDetails;
@@ -42,6 +51,11 @@
 			oneMinDeltaChartContainer.clientWidth,
 			oneMinDeltaChartContainer.clientHeight
 		);
+		fiveMinChart.resize(fiveMainChartContainer.clientWidth, fiveMainChartContainer.clientHeight);
+		fiveMinDeltaChart.resize(
+			fiveMinDeltaChartContainer.clientWidth,
+			fiveMinDeltaChartContainer.clientHeight
+		);
 	});
 
 	onMount(async () => {
@@ -51,19 +65,24 @@
 
 		const assetPairInfo = await invoke('get_tradeable_asset_pair');
 
-		console.log(assetPairInfo);
-
 		const rangeData: [RangeBar[], DeltaBar[]] = await invoke('app_start');
 
 		rangeChart = createMainCandleChart(rangeChartContainer);
 		deltaChart = createMainCandleChart(deltaChartContainer);
+
 		oneMinChart = createMainCandleChart(oneMainChartContainer);
 		oneMinDeltaChart = createMainCandleChart(oneMinDeltaChartContainer);
+
+		fiveMinChart = createMainCandleChart(fiveMainChartContainer);
+		fiveMinDeltaChart = createMainCandleChart(fiveMinDeltaChartContainer);
 
 		rangeBars = rangeChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
 		deltaBars = deltaChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
 		oneMinBars = oneMinChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
 		oneMinDeltaBars = oneMinDeltaChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
+
+		fiveMinBars = fiveMinChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
+		fiveMinDeltaBars = fiveMinDeltaChart.addCandlestickSeries(createCandlestickConfig(2, 0.01));
 
 		const chartData = rangeData[0].map((item) => {
 			return {
@@ -99,6 +118,12 @@
 
 		oneMinDeltaChart.timeScale().fitContent();
 		oneMinDeltaChart.timeScale().scrollToRealTime();
+
+		fiveMinChart.timeScale().fitContent();
+		fiveMinChart.timeScale().scrollToRealTime();
+
+		fiveMinDeltaChart.timeScale().fitContent();
+		fiveMinDeltaChart.timeScale().scrollToRealTime();
 
 		loaded = true;
 	});
@@ -157,6 +182,33 @@
 		};
 		oneMinDeltaBars.update(newDeltaBar);
 	});
+
+	listen('fiveMinOhlc', ({ payload }) => {
+		const ohlcBar = payload as OhlcPayload;
+
+		let newOhlcBar = {
+			time: ohlcBar.time as Time,
+			open: Number(ohlcBar.open),
+			high: Number(ohlcBar.high),
+			low: Number(ohlcBar.low),
+			close: Number(ohlcBar.close)
+		};
+
+		fiveMinBars.update(newOhlcBar);
+	});
+
+	listen('fiveMinCVD', ({ payload }) => {
+		const deltaBar = payload as DeltaBar;
+
+		let newDeltaBar = {
+			time: deltaBar.start_time as Time,
+			open: Number(deltaBar.open),
+			high: Number(deltaBar.high),
+			low: Number(deltaBar.low),
+			close: Number(deltaBar.close)
+		};
+		fiveMinDeltaBars.update(newDeltaBar);
+	});
 </script>
 
 <main class="w-[100vw] h-[100vh] overflow-none p-1 flex-col">
@@ -176,8 +228,14 @@
 			<div class="w-full h-1/3" bind:this={deltaChartContainer} />
 		</div>
 		<div class="h-full w-1/2">
-			<div class="w-full h-2/3" bind:this={oneMainChartContainer} />
-			<div class="w-full h-1/3" bind:this={oneMinDeltaChartContainer} />
+			<div class="h-1/2 w-full">
+				<div class="w-full h-2/3" bind:this={oneMainChartContainer} />
+				<div class="w-full h-1/3" bind:this={oneMinDeltaChartContainer} />
+			</div>
+			<div class="h-1/2 w-full">
+				<div class="w-full h-2/3" bind:this={fiveMainChartContainer} />
+				<div class="w-full h-1/3" bind:this={fiveMinDeltaChartContainer} />
+			</div>
 		</div>
 	</div>
 	<div class="w-full">

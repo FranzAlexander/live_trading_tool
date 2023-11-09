@@ -66,7 +66,7 @@ pub struct MarketOrderMessage {
     pub misc: String,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct OhlcMessage {
     pub id: i64,
     pub ohlc: OhlcCandleMessage,
@@ -74,7 +74,7 @@ pub struct OhlcMessage {
     pub pair: String,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
 pub struct OhlcCandleMessage {
     #[serde(with = "string_or_float")]
     pub time: f64,
