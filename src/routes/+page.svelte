@@ -43,6 +43,8 @@
 	$: usdBalance = {} as ExtendedDetails;
 	$: solBalance = {} as ExtendedDetails;
 
+	$: tickPrice = 0.0;
+
 	listen('tauri://resize', (event) => {
 		rangeChart.resize(rangeChartContainer.clientWidth, rangeChartContainer.clientHeight);
 		deltaChart.resize(deltaChartContainer.clientWidth, deltaChartContainer.clientHeight);
@@ -209,6 +211,11 @@
 		};
 		fiveMinDeltaBars.update(newDeltaBar);
 	});
+
+	listen('tickPrice', ({ payload }) => {
+		tickPrice = payload as number;
+		console.log(tickPrice);
+	});
 </script>
 
 <main class="w-[100vw] h-[100vh] overflow-none p-1 flex-col">
@@ -239,6 +246,6 @@
 		</div>
 	</div>
 	<div class="w-full">
-		<TradingOrderPanel />
+		<TradingOrderPanel usdAmount={usdBalance.balance} solAmount={solBalance.balance} {tickPrice} />
 	</div>
 </main>

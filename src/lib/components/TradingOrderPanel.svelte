@@ -1,107 +1,112 @@
 <script lang="ts">
-	const orderTypes: string[] = ['limit', 'market', 'stop-loss'];
+	export let usdAmount: number;
+	export let solAmount: number;
 
-	let quantity = 1;
-	let price = 42.5;
-	let fees = 0.12;
-	let leverage = 4;
-	// let orderType = 'limit'; // default to market order
-	let selectedOrderType = 'limit';
-	$: totalPrice = 0.0;
-	$: buySell = 'buy';
+	export let tickPrice: number;
 
-	const calculateTotalPrice = () => {
-		totalPrice = price * quantity * leverage + fees;
-	};
+	let percentageOfFunds: number = 1;
 
-	$: calculateTotalPrice;
+	enum OrderType {
+		Market = 'market',
+		Limit = 'limit',
+		StopLoss = 'stop-loss',
+		TakeProfit = 'take-profit',
+		StopLossLimit = 'stop-loss-limit',
+		TakeProfitLimit = 'take-profit-limit',
+		SettlePosition = 'settle-position'
+	}
+
+	let orderType: OrderType = OrderType.Limit;
+	let side: 'buy' | 'sell' = 'buy';
+	let volume: number = 0.0;
+	let leverage: number = 1;
+	let quantity = 1.0;
+
+	$: volume = ((usdAmount * percentageOfFunds) / 100) * leverage;
+
+	let adjustedPrice: number = tickPrice;
+
+	$: adjustedPrice = side === 'buy' ? tickPrice - 0.01 : tickPrice + 0.01;
 </script>
 
-<div class="w-1/2 text-white bg-gray-800 flex">
-	<div class="px-2 mb-4">
-		<label for="orderType" class="block text-sm font-medium">Order Type</label>
-		<select
-			id="orderType"
-			bind:value={selectedOrderType}
-			class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-md shadow-sm"
-		>
-			{#each orderTypes as orderType}
-				<option value={orderType}>{orderType.charAt(0).toUpperCase() + orderType.slice(1)}</option>
-			{/each}
-		</select>
-	</div>
-</div>
-
-<!-- <div class="absolute inset-x-0 bottom-0 p-4 bg-gray-800 text-white">
-	<div class="flex flex-wrap -mx-2">
-		<div class="w-full md:w-1/5 px-2 mb-4">
-			<label for="orderType" class="block text-sm font-medium">Order Type</label>
+<div class="w-1/2 text-white bg-gray-800 flex-col">
+	<div class="w-full p-2 flex justify-evenly">
+		<div>
+			<label for="side">Side:</label>
+			<select id="side" bind:value={side}>
+				<option value="buy">Buy</option>
+				<option value="sell">Sell</option>
+			</select>
+		</div>
+		<div>
+			<label for="orderType" class="block text-gray-700 text-sm font-bold mb-2">Order Type:</label>
 			<select
 				id="orderType"
 				bind:value={orderType}
-				class="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-md shadow-sm"
+				class="shadow border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
 			>
-				<option value="market">Market</option>
-				<option value="limit">Limit</option>
-				<option value="stop">Stop</option>
+				{#each Object.values(OrderType) as type}
+					<option value={type}>{type}</option>
+				{/each}
 			</select>
 		</div>
-
-		<div class="w-full md:w-1/5 px-2 mb-4">
-			<label for="quantity" class="block text-sm font-medium text-gray-700">Quantity</label>
-			<input
-				type="number"
-				id="quantity"
-				min="1"
-				bind:value={quantity}
-				class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-			/>
-		</div>
-
-		{#if orderType === 'limit'}
-			<div class="w-full md:w-1/5 px-2 mb-4">
-				<label for="price" class="block text-sm font-medium text-gray-700">Limit Price</label>
-				<input
-					type="number"
-					id="price"
-					bind:value={price}
-					step="0.01"
-					class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-				/>
-			</div>
-		{/if}
-
-		<div class="w-full md:w-1/5 px-2 mb-4">
-			<label for="leverage" class="block text-sm font-medium">Leverage</label>
+		<div class="mb-4">
+			<label for="leverage" class="block text-gray-300 text-sm font-bold mb-2">Leverage:</label>
 			<input
 				type="number"
 				id="leverage"
-				min="1"
 				bind:value={leverage}
-				class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-700 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-			/>
-		</div>
-
-		<div class="w-full md:w-1/5 px-2 mb-4">
-			<label for="fees" class="block text-sm font-medium">Fees</label>
-			<input
-				type="number"
-				id="fees"
-				min="0"
-				bind:value={fees}
-				step="0.01"
-				class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-700 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+				min="1"
+				max="4"
+				class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 text-white"
 			/>
 		</div>
 	</div>
 
-	<div class="text-lg font-bold p-2">
-		Total Price: <span class="text-green-400">${totalPrice.toFixed(2)}</span>
+	<div class="mb-6">
+		<label for="adjustedPrice" class="block text-gray-300 text-sm font-bold mb-2">Price:</label>
+		<input
+			type="number"
+			id="adjustedPrice"
+			bind:value={adjustedPrice}
+			step="any"
+			class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 text-white"
+			readonly
+		/>
+	</div>
+	<div class="mb-4">
+		<label for="fundsPercentage" class="block text-gray-300 text-sm font-bold mb-2"
+			>Use Funds (%): {percentageOfFunds}%</label
+		>
+		<input
+			type="range"
+			id="fundsPercentage"
+			min="0"
+			max="100"
+			bind:value={percentageOfFunds}
+			class="w-full accent-blue-500"
+		/>
+	</div>
+
+	<div class="mb-6">
+		<label for="volume" class="block text-gray-300 text-sm font-bold mb-2"
+			>Volume (e.g., SOL):</label
+		>
+		<input
+			type="number"
+			id="volume"
+			bind:value={volume}
+			min="0"
+			step="any"
+			readonly
+			class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 text-white"
+		/>
 	</div>
 
 	<button
-		class="mt-4 w-full md:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+		type="submit"
+		class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
 	>
 		Place Order
 	</button>
-</div> -->
+</div>

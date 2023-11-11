@@ -10,6 +10,7 @@ pub enum KrakenEvent {
     Heartbeat(HeartbeatMessage),
     MarketOrder(MarketTradeMessage),
     OhlcEvent(OhlcMessage),
+    TickEvent(TickerMessage),
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -93,6 +94,62 @@ pub struct OhlcCandleMessage {
     #[serde(with = "string_or_float")]
     pub volume: f64,
     pub count: i64,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct TickerMessage {
+    pub id: i64,
+    pub tick: TickMessage,
+    pub name: String,
+    pub pair: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct TickMessage {
+    #[serde(rename = "a")]
+    pub ask: AskBid,
+    #[serde(rename = "b")]
+    pub bid: AskBid,
+    #[serde(rename = "c")]
+    pub close: TickClose,
+    #[serde(rename = "v")]
+    pub volume: TickPrice,
+    #[serde(rename = "p")]
+    pub vwap: TickPrice,
+    #[serde(rename = "t")]
+    pub trades: TickPrice,
+    #[serde(rename = "l")]
+    pub low: TickPrice,
+    #[serde(rename = "h")]
+    pub high: TickPrice,
+    #[serde(rename = "o")]
+    pub open: TickPrice,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct AskBid {
+    #[serde(with = "string_or_float")]
+    pub price: f64,
+    #[serde(rename = "wholeLotVolume")]
+    pub whole_lot_volume: i64,
+    #[serde(with = "string_or_float", rename = "lotVolume")]
+    pub lot_volume: f64,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct TickClose {
+    #[serde(with = "string_or_float")]
+    pub price: f64,
+    #[serde(with = "string_or_float", rename = "lotVolume")]
+    pub lot_volume: f64,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct TickPrice {
+    #[serde(with = "string_or_float")]
+    pub today: f64,
+    #[serde(with = "string_or_float", rename = "last24Hours")]
+    pub last_24_hours: f64,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

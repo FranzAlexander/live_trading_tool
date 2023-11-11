@@ -131,6 +131,20 @@ async fn kraken_websocket(
     "event": "subscribe",
     "pair": ["SOL/USD"],
     "subscription": {
+        "name":"ticker"
+    }});
+
+    ws_stream
+        .send(tokio_tungstenite::tungstenite::Message::Text(
+            subscription_msg.to_string(),
+        ))
+        .await
+        .unwrap();
+
+    let subscription_msg = serde_json::json!({
+    "event": "subscribe",
+    "pair": ["SOL/USD"],
+    "subscription": {
         "name":"ohlc",
         "interval":1
     }});
@@ -217,6 +231,9 @@ async fn kraken_websocket(
                             }
                             let _ = app_handle.emit_all("fiveMinOhlc", payload);
                         }
+                    }
+                    KrakenEvent::TickEvent(tick) => {
+                        let _ = app_handle.emit_all("tickPrice", tick.tick.close.price);
                     }
                     _ => (),
                 }
