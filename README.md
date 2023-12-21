@@ -1,38 +1,44 @@
-# create-svelte
+live_trading_tool
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+Project Overview
+Status: Discontinued
 
-## Creating a project
+This project is a Tauri and SvelteKit-based application designed to interact with the Kraken cryptocurrency exchange. It demonstrates the capability to connect to the Kraken HTTP API and establish a sustained WebSocket connection for real-time data streaming.
 
-If you're seeing this, you've probably already done this step. Congrats!
+--------------------------------------------------------------
+Key Features:
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+Backend Integration: Developed in Rust, the backend handles data processing and includes various technical analysis indicators.
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+Frontend Visualization: Utilizes the lightweight-charts library to dynamically display data on the frontend, providing an interactive interface for cryptocurrency analysis.
 
-## Developing
+WebSocket Connectivity: Ensures a stable WebSocket connection with Kraken for real-time, accurate data feeds.
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+--------------------------------------------------------------
 
-```bash
-npm run dev
+Purpose and Scope:
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+The application's primary function is to display three types of charts: a range bar chart, a one-minute chart, and a five-minute chart, enhanced with built-in indicators for analyzing cryptocurrency trends.
 
-## Building
+--------------------------------------------------------------
 
-To create a production version of your app:
+Technologies Used:
 
-```bash
-npm run build
-```
+Frontend: SvelteKit
 
-You can preview the production build with `npm run preview`.
+Backend: Rust (Tauri Framework)
 
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+Data Visualization: Lightweight-Charts Library
+
+API Integration: Kraken HTTP and WebSocket APIs
+
+--------------------------------------------------------------
+
+Challenges and Learning Outcomes:
+
+WebSocket Integration: Overcoming the initial challenge of integrating the Kraken async WebSocket within the Tauri environment was a key learning experience, enhancing my understanding of asynchronous programming and API integration in Rust.
+
+--------------------------------------------------------------
+
+Contact
+For any inquiries or discussions related to this project, feel free to contact me at alexbalcombe4@gmail.com.
